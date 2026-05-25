@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ロト7 ANALYZER v4 最新版</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+:root{
+  --bg:#060a12;--surface:#0f1623;--surface2:#172035;
+  --accent:#00e5ff;--accent2:#ff6b35;--accent3:#7c3aed;--gold:#fbbf24;
+  --hot:#ef4444;--cold:#3b82f6;--neutral:#6b8caa;
+  --text:#e2e8f0;--text-dim:#4a6080;--border:rgba(0,229,255,0.12);
+  --glow:0 0 20px rgba(0,229,255,0.15);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 15% 40%,rgba(0,229,255,0.04) 0%,transparent 55%),radial-gradient(ellipse at 85% 15%,rgba(124,58,237,0.04) 0%,transparent 55%);pointer-events:none;z-index:0;}
+
+header{position:relative;z-index:1;text-align:center;padding:28px 16px 18px;border-bottom:1px solid var(--border);}
+header h1{font-family:'Orbitron',monospace;font-size:clamp(18px,5vw,32px);font-weight:900;color:var(--accent);text-shadow:0 0 40px rgba(0,229,255,0.6);letter-spacing:6px;}
+.header-sub{color:var(--text-dim);font-size:11px;margin-top:5px;letter-spacing:3px;}
+.save-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim);margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 10px;}
+.save-dot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);}
+.save-dot.active{background:var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.container{max-width:900px;margin:0 auto;padding:12px;position:relative;z-index:1;}
+.tabs{display:flex;gap:3px;margin:16px 0 12px;background:var(--surface);padding:3px;border-radius:10px;border:1px solid var(--border);}
+.tab{flex:1;padding:9px 4px;background:none;border:none;color:var(--text-dim);font-family:'Noto Sans JP',sans-serif;font-size:11px;border-radius:7px;cursor:pointer;transition:all 0.2s;}
+.tab.active{background:linear-gradient(135deg,var(--accent),#0099bb);color:#000;font-weight:700;box-shadow:0 2px 10px rgba(0,229,255,0.3);}
+.tab-content{display:none;animation:fadeIn 0.2s ease;}
+.tab-content.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--glow);}
+.card-title{font-family:'Orbitron',monospace;font-size:10px;color:var(--accent);letter-spacing:3px;margin-bottom:12px;text-transform:uppercase;}
+
+.number-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;}
+.num-cell{background:var(--surface2);border-radius:8px;padding:7px 3px;text-align:center;border:1px solid transparent;transition:all 0.2s;}
+.num-cell.hot{border-color:var(--hot);box-shadow:0 0 12px rgba(239,68,68,0.2);}
+.num-cell.warm{border-color:var(--accent2);}
+.num-cell.cold{border-color:var(--cold);box-shadow:0 0 12px rgba(59,130,246,0.2);}
+.num-cell.neutral{border-color:rgba(107,140,170,0.15);}
+.num-label{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;margin-bottom:3px;}
+.num-cell.hot .num-label{color:var(--hot);}
+.num-cell.warm .num-label{color:var(--accent2);}
+.num-cell.cold .num-label{color:var(--cold);}
+.num-cell.neutral .num-label{color:var(--neutral);}
+.num-count{font-size:10px;color:var(--text-dim);}
+.num-bar-wrap{height:2px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:4px;overflow:hidden;}
+.num-bar{height:100%;border-radius:2px;}
+.num-cell.hot .num-bar{background:var(--hot);}
+.num-cell.warm .num-bar{background:var(--accent2);}
+.num-cell.cold .num-bar{background:var(--cold);}
+.num-cell.neutral .num-bar{background:var(--neutral);}
+
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim);}
+.legend-dot{width:8px;height:8px;border-radius:50%;border:2px solid;}
+.legend-dot.hot{border-color:var(--hot);}
+.legend-dot.warm{border-color:var(--accent2);}
+.legend-dot.cold{border-color:var(--cold);}
+
+.cycle-table{width:100%;border-collapse:collapse;font-size:11px;}
+.cycle-table th{background:var(--surface2);color:var(--accent);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;padding:7px 5px;text-align:center;border-bottom:1px solid var(--border);}
+.cycle-table td{padding:6px 5px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);}
+.cycle-table tr:hover td{background:rgba(0,229,255,0.03);}
+.overdue{color:var(--hot)!important;font-weight:700;}
+.due-soon{color:var(--gold)!important;font-weight:700;}
+.fresh{color:var(--cold)!important;}
+
+.btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),#0099bb);color:#000;border:none;border-radius:10px;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;margin-top:10px;transition:all 0.2s;position:relative;overflow:hidden;}
+.btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);transition:left 0.4s;}
+.btn:hover::before{left:100%;}
+.btn:hover{box-shadow:0 4px 20px rgba(0,229,255,0.4);}
+.btn2{background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;margin-top:8px;}
+.btn2:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);}
+.btn-sm{width:auto;padding:8px 16px;font-size:10px;margin-top:0;letter-spacing:1px;}
+.btn-danger{background:linear-gradient(135deg,var(--hot),#990000);color:#fff;}
+
+.info-banner{background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.18);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.7;}
+.info-banner strong{color:var(--accent);}
+.warn-banner{background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.7;}
+.success-banner{background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.3);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent);margin-bottom:10px;font-weight:700;}
+.section-sub{font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.7;}
+.gl{color:var(--gold);font-weight:700;}
+.hl{color:var(--accent2);font-weight:700;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+.add-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group label{font-size:10px;color:var(--text-dim);letter-spacing:1px;}
+.form-group input{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Orbitron',monospace;font-size:12px;padding:8px 10px;width:100%;transition:border-color 0.2s;}
+.form-group input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 8px rgba(0,229,255,0.2);}
+.form-group.full{grid-column:1/-1;}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-family:'Orbitron',monospace;}
+.tag-new{background:rgba(0,229,255,0.15);color:var(--accent);border:1px solid rgba(0,229,255,0.3);}
+
+/* 予想セット */
+.predict-set{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+.predict-set-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+.predict-set-num{font-family:'Orbitron',monospace;font-size:10px;color:var(--accent2);letter-spacing:2px;}
+.balls-display{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:10px 0 6px;}
+.ball-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.ball-sub{font-size:8px;color:var(--text-dim);min-height:10px;}
+.editable-ball{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-weight:700;font-size:13px;position:relative;flex-shrink:0;cursor:pointer;transition:transform 0.15s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.editable-ball:hover{transform:scale(1.12);}
+.editable-ball:active{transform:scale(0.95);}
+.editable-ball::after{content:'';position:absolute;top:18%;left:22%;width:28%;height:18%;background:rgba(255,255,255,0.3);border-radius:50%;filter:blur(2px);pointer-events:none;}
+.edit-hint{font-size:9px;color:var(--text-dim);text-align:center;margin-top:4px;}
+.set-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.set-actions button{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:1px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+.set-actions .btn-sort{border-color:rgba(124,58,237,0.4);color:#9b73e8;}
+.set-actions .btn-reset{border-color:rgba(255,107,53,0.35);color:var(--accent2);}
+.set-actions .btn-save{border-color:rgba(0,229,255,0.35);color:var(--accent);}
+.dup-badge{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:var(--hot);font-size:9px;border-radius:4px;padding:2px 6px;font-family:'Orbitron',monospace;}
+
+/* ピッカー */
+.num-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:flex-end;justify-content:center;animation:overlayIn 0.2s ease;}
+@keyframes overlayIn{from{opacity:0;}to{opacity:1;}}
+.num-picker{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:500px;animation:pickerIn 0.25s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 -8px 40px rgba(0,0,0,0.5);}
+@keyframes pickerIn{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.picker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.picker-title{font-family:'Orbitron',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;}
+.picker-close{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.picker-info{font-size:10px;color:var(--text-dim);margin-bottom:12px;background:var(--surface2);border-radius:6px;padding:6px 10px;}
+.picker-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;max-height:240px;overflow-y:auto;}
+.picker-num{aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--text-dim);transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+.picker-num:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,0.1);}
+.picker-num.used{opacity:0.25;cursor:not-allowed;pointer-events:none;}
+.picker-num.current{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,0.12);}
+
+/* 保存セット */
+.saved-set-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.saved-set-date{font-size:9px;color:var(--text-dim);flex-shrink:0;}
+.saved-set-balls{display:flex;gap:4px;flex-wrap:wrap;flex:1;}
+.mini-ball{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;flex-shrink:0;}
+</style>
+</head>
+<body>
+<header>
+  <h1>LOTO7 ANALYZER</h1>
+  <div class="header-sub">出現頻度・周期・予想 統合分析</div>
+  <div class="save-status"><div class="save-dot" id="save-dot"></div><span id="save-label">データ読み込み中...</span></div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('freq',this)">頻度</button>
+    <button class="tab" onclick="switchTab('cycle',this)">周期</button>
+    <button class="tab" onclick="switchTab('zone',this)">帯域</button>
+    <button class="tab" onclick="switchTab('predict',this)">予想</button>
+    <button class="tab" onclick="switchTab('update',this)">更新</button>
+  </div>
+
+  <!-- 頻度 -->
+  <div id="tab-freq" class="tab-content active">
+    <div class="card">
+      <div class="card-title">▶ 出現頻度マップ</div>
+      <p class="section-sub">全<span id="total-rounds" class="gl">0</span>回分。<span class="gl">直近10回</span>で色分け。</p>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot hot"></div>ホット(全期間上位25%かつ直近あり)</div>
+        <div class="legend-item"><div class="legend-dot warm"></div>ウォーム(全期間上位50%)</div>
+        <div class="legend-item"><div class="legend-dot cold"></div>コールド(直近10回0回)</div>
+      </div>
+      <div class="number-grid" id="freq-grid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">▶ 全期間 出現ランキング TOP10</div>
+      <div id="ranking-list"></div>
+    </div>
+  </div>
+
+  <!-- 周期 -->
+  <div id="tab-cycle" class="tab-content">
+    <div class="card">
+      <div class="card-title">▶ 出現周期分析</div>
+      <p class="section-sub"><span class="gl">赤 = 平均間隔を超えて未出現（次回期待度高）</span></p>
+      <div class="table-wrap">
+        <table class="cycle-table">
+          <thead><tr><th>数字</th><th>総出現</th><th>平均間隔</th><th>前回出現</th><th>不在回数</th><th>期待度</th></tr></thead>
+          <tbody id="cycle-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 帯域 -->
+  <div id="tab-zone" class="tab-content">
+    <div class="card">
+      <div class="card-title">▶ 帯域分布パターン TOP8</div>
+      <p class="section-sub">1-9 / 10-19 / 20-29 / 30-37 の個数組み合わせ頻度</p>
+      <div id="zone-pattern-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">▶ 奇偶比率</div>
+      <div id="odd-even-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">▶ 連続数 発生履歴</div>
+      <p class="section-sub">エリア別に連続数字の発生回を表示。直近20回分。</p>
+      <div id="cons-analysis"></div>
+    </div>
+  </div>
+
+  <!-- 予想 -->
+  <div id="tab-predict" class="tab-content">
+    <div class="card">
+      <div class="card-title">▶ 次回予想生成</div>
+      <div class="info-banner">軸数字を<strong>1〜3個</strong>タップ→生成。</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;letter-spacing:1px;">軸数字を選択</div>
+      <div class="number-grid" id="axis-selector"></div>
+      <button class="btn" onclick="generatePredictions(false)">▶ 選択した軸で予想生成</button>
+      <button class="btn btn2" onclick="generatePredictions(true)">🎲 軸自動選択で予想生成</button>
+    </div>
+    <div id="predictions-output"></div>
+  </div>
+
+  <!-- 更新 -->
+  <div id="tab-update" class="tab-content">
+    <div class="card">
+      <div class="card-title">▶ 毎週の当選番号を追加</div>
+      <div class="info-banner"><strong>入力したデータはこのブラウザに自動保存されます。</strong></div>
+      <div class="add-form">
+        <div class="form-group full"><label>抽選日（例：2026/05/29）</label><input type="text" id="inp-date" placeholder="2026/05/29" maxlength="10"></div>
+        <div class="form-group"><label>本数字①</label><input type="number" id="n1" min="1" max="37"></div>
+        <div class="form-group"><label>本数字②</label><input type="number" id="n2" min="1" max="37"></div>
+        <div class="form-group"><label>本数字③</label><input type="number" id="n3" min="1" max="37"></div>
+        <div class="form-group"><label>本数字④</label><input type="number" id="n4" min="1" max="37"></div>
+        <div class="form-group"><label>本数字⑤</label><input type="number" id="n5" min="1" max="37"></div>
+        <div class="form-group"><label>本数字⑥</label><input type="number" id="n6" min="1" max="37"></div>
+        <div class="form-group"><label>本数字⑦</label><input type="number" id="n7" min="1" max="37"></div>
+        <div class="form-group"><label>ボーナス①</label><input type="number" id="b1" min="1" max="37"></div>
+        <div class="form-group"><label>ボーナス②</label><input type="number" id="b2" min="1" max="37"></div>
+      </div>
+      <div id="add-result"></div>
+      <button class="btn" onclick="addNewResult()">▶ 追加して保存</button>
+    </div>
+    <div class="card">
+      <div class="card-title">▶ 保存済みデータ一覧</div>
+      <div id="loaded-data-info"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px;">
+        <button class="btn btn-sm btn-danger" onclick="confirmReset()">🗑 追加データを削除</button>
+      </div>
+      <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
+        <table class="cycle-table">
+          <thead><tr><th>日付</th><th>①</th><th>②</th><th>③</th><th>④</th><th>⑤</th><th>⑥</th><th>⑦</th><th>B1</th><th>B2</th><th></th></tr></thead>
+          <tbody id="data-preview-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ピッカー -->
+<div id="picker-overlay" class="num-picker-overlay" style="display:none;" onclick="closePicker(event)">
+  <div class="num-picker">
+    <div class="picker-header">
+      <div class="picker-title" id="picker-title">数字を選択</div>
+      <button class="picker-close" onclick="closePicker(null,true)">✕</button>
+    </div>
+    <div class="picker-info" id="picker-info"></div>
+    <div class="picker-grid" id="picker-grid"></div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// ベースデータ
+// =====================================================
+const BASE_DATA=[
+  {date:'2025/05/02',nums:[2,14,15,26,27,34,36],bonus:[5,2]},
+  {date:'2025/05/09',nums:[3,10,12,18,19,24,32],bonus:[4,3]},
+  {date:'2025/05/16',nums:[1,7,12,17,23,32,37],bonus:[14,30]},
+  {date:'2025/05/23',nums:[9,15,21,25,33,34,37],bonus:[10,35]},
+  {date:'2025/05/30',nums:[2,8,9,11,18,27,35],bonus:[16,34]},
+  {date:'2025/06/06',nums:[1,7,9,21,23,29,34],bonus:[22,29]},
+  {date:'2025/06/13',nums:[4,6,8,23,28,29,34],bonus:[10,19]},
+  {date:'2025/06/20',nums:[5,6,8,17,33,34,36],bonus:[25,21]},
+  {date:'2025/06/27',nums:[5,7,10,11,29,31,37],bonus:[13,25]},
+  {date:'2025/07/04',nums:[2,5,10,17,21,31,36],bonus:[20,32]},
+  {date:'2025/07/11',nums:[2,12,18,29,32,36,37],bonus:[5,21]},
+  {date:'2025/07/18',nums:[10,20,23,29,33,34,37],bonus:[4,15]},
+  {date:'2025/07/25',nums:[10,14,17,20,26,27,29],bonus:[3,11]},
+  {date:'2025/08/01',nums:[1,4,7,8,9,20,21],bonus:[11,30]},
+  {date:'2025/08/08',nums:[1,6,18,19,35,36,37],bonus:[11,24]},
+  {date:'2025/08/15',nums:[5,15,20,30,31,34,37],bonus:[13,29]},
+  {date:'2025/08/22',nums:[2,7,9,12,13,19,34],bonus:[13,30]},
+  {date:'2025/08/29',nums:[1,3,7,23,24,33,36],bonus:[17,30]},
+  {date:'2025/09/05',nums:[1,7,22,23,33,34,35],bonus:[2,24]},
+  {date:'2025/09/12',nums:[1,12,16,18,27,34,35],bonus:[19,22]},
+  {date:'2025/09/19',nums:[1,11,12,14,20,25,29],bonus:[2,5]},
+  {date:'2025/09/26',nums:[10,16,20,26,28,32,34],bonus:[24,33]},
+  {date:'2025/10/03',nums:[5,12,13,15,18,35,37],bonus:[11,29]},
+  {date:'2025/10/10',nums:[1,4,9,13,17,23,28],bonus:[18,31]},
+  {date:'2025/10/17',nums:[3,7,19,24,28,29,35],bonus:[18,13]},
+  {date:'2025/10/24',nums:[12,22,23,26,33,35,37],bonus:[2,21]},
+  {date:'2025/10/31',nums:[1,8,10,14,21,25,37],bonus:[12,21]},
+  {date:'2025/11/07',nums:[2,13,19,20,24,26,35],bonus:[29,36]},
+  {date:'2025/11/14',nums:[1,21,26,27,28,32,35],bonus:[6,37]},
+  {date:'2025/11/21',nums:[6,7,12,25,26,30,33],bonus:[13,15]},
+  {date:'2025/11/28',nums:[3,21,25,28,29,30,32],bonus:[28,31]},
+  {date:'2025/12/05',nums:[4,5,12,13,24,34,37],bonus:[8,14]},
+  {date:'2025/12/12',nums:[1,4,6,20,30,34,37],bonus:[14,25]},
+  {date:'2025/12/19',nums:[9,11,16,21,23,27,29],bonus:[6,24]},
+  {date:'2025/12/26',nums:[10,12,16,18,19,22,37],bonus:[6,24]},
+  {date:'2026/01/09',nums:[2,6,9,14,27,34,37],bonus:[5,18]},
+  {date:'2026/01/16',nums:[4,8,12,13,17,31,37],bonus:[5,18]},
+  {date:'2026/01/23',nums:[7,12,17,22,31,34,35],bonus:[20,32]},
+  {date:'2026/01/30',nums:[4,14,15,21,22,24,37],bonus:[5,20]},
+  {date:'2026/02/06',nums:[3,4,8,14,17,21,37],bonus:[17,37]},
+  {date:'2026/02/13',nums:[3,4,8,14,21,22,37],bonus:[17,37]},
+  {date:'2026/02/20',nums:[6,8,14,19,22,25,34],bonus:[17,12]},
+  {date:'2026/02/27',nums:[2,7,18,22,23,24,33],bonus:[16,34]},
+  {date:'2026/03/06',nums:[9,13,20,22,24,28,29],bonus:[21,23]},
+  {date:'2026/03/13',nums:[3,8,11,14,18,22,35],bonus:[19,35]},
+  {date:'2026/03/20',nums:[2,3,5,6,7,8,9],bonus:[11,23]},
+  {date:'2026/03/27',nums:[4,9,10,18,21,34,37],bonus:[15,23]},
+  {date:'2026/04/03',nums:[7,8,16,22,28,33,36],bonus:[9,5]},
+  {date:'2026/04/10',nums:[3,8,9,12,16,24,32],bonus:[9,5]},
+  {date:'2026/04/17',nums:[6,9,10,12,16,24,32],bonus:[17,19]},
+  {date:'2026/04/24',nums:[1,7,8,12,24,28,32],bonus:[6,23]},
+  {date:'2026/05/01',nums:[5,8,16,18,24,28,36],bonus:[6,23]},
+  {date:'2026/05/08',nums:[2,6,7,8,15,17,19],bonus:[1,33]},
+  {date:'2026/05/15',nums:[5,7,8,15,17,19,25],bonus:[1,33]},
+  {date:'2026/05/22',nums:[2,6,12,15,24,26,34],bonus:[18,20]},
+];
+
+const STORAGE_KEY='loto7_extra_v2';
+const SAVED_KEY='loto7_saved_sets_v1';
+let extraData=[], allData=[], selectedAxes=new Set();
+let editSets=[], originalSets=[];
+let currentAxes=[], currentLastNums=[];
+let pickerState={setIdx:-1,ballIdx:-1};
+
+// =====================================================
+// ユーティリティ
+// =====================================================
+function getZoneInfo(n){
+  if(n<=9) return{label:'1-9',  color:'#ff6b35',bg:'rgba(255,107,53,0.12)', border:'rgba(255,107,53,0.4)'};
+  if(n<=19)return{label:'10-19',color:'#00e5ff',bg:'rgba(0,229,255,0.10)',  border:'rgba(0,229,255,0.35)'};
+  if(n<=29)return{label:'20-29',color:'#7c3aed',bg:'rgba(124,58,237,0.12)', border:'rgba(124,58,237,0.4)'};
+           return{label:'30-37',color:'#fbbf24',bg:'rgba(251,191,36,0.10)',  border:'rgba(251,191,36,0.35)'};
+}
+
+let _rankThresholds={s:0,a:0,b:0};
+function buildRankThresholds(){
+  const fa=getFrequency(allData),fr=getFrequency(allData,10),cd=getCycleData(allData);
+  const all=Array.from({length:37},(_,i)=>scoreNumber(i+1,fa,fr,cd)).sort((a,b)=>a-b);
+  _rankThresholds={
+    s:all[Math.floor(all.length*0.75)],
+    a:all[Math.floor(all.length*0.50)],
+    b:all[Math.floor(all.length*0.25)],
+  };
+}
+function scoreToRank(score){
+  if(score>=_rankThresholds.s)return{rank:'S',color:'#fbbf24',shadow:'0 0 10px rgba(251,191,36,0.7)'};
+  if(score>=_rankThresholds.a)return{rank:'A',color:'#00e5ff',shadow:'0 0 10px rgba(0,229,255,0.5)'};
+  if(score>=_rankThresholds.b)return{rank:'B',color:'#7c3aed',shadow:'0 0 8px rgba(124,58,237,0.4)'};
+  return{rank:'C',color:'#6b8caa',shadow:'none'};
+}
+
+function calcScore(nums,scores){
+  return Math.round(nums.reduce((a,n)=>a+scores[n],0));
+}
+
+function getBallStyle(n,nums,axes,lastNums){
+  const isAxis=(axes||[]).includes(n);
+  const isPull=(lastNums||[]).includes(n);
+  const sorted=[...nums].sort((a,b)=>a-b);
+  const isCons=sorted.includes(n-1)||sorted.includes(n+1);
+  if(isAxis)      return{bg:'radial-gradient(circle at 35% 30%,#ffe066,#cc8800)',shadow:'0 4px 16px rgba(251,191,36,0.7)',color:'#000',label:'軸'};
+  if(isPull&&isCons)return{bg:'radial-gradient(circle at 35% 30%,#ff9966,#cc3300)',shadow:'0 4px 16px rgba(255,80,0,0.6)',color:'#fff',label:'引連'};
+  if(isPull)      return{bg:'radial-gradient(circle at 35% 30%,#ff6b6b,#cc0033)',shadow:'0 4px 14px rgba(255,50,50,0.55)',color:'#fff',label:'引'};
+  if(isCons)      return{bg:'radial-gradient(circle at 35% 30%,#66ffcc,#009966)',shadow:'0 4px 14px rgba(0,200,120,0.5)',color:'#000',label:'連'};
+  return{bg:'radial-gradient(circle at 35% 30%,#1de9ff,#0077aa)',shadow:'0 4px 12px rgba(0,229,255,0.4)',color:'#fff',label:''};
+}
+
+function getMiniStyle(n,nums,axes,lastNums){
+  const isAxis=(axes||[]).includes(n);
+  const isPull=(lastNums||[]).includes(n);
+  const sorted=[...nums].sort((a,b)=>a-b);
+  const isCons=sorted.includes(n-1)||sorted.includes(n+1);
+  if(isAxis)        return{bg:'radial-gradient(circle at 35% 30%,#ffe066,#cc8800)',color:'#000',shadow:'0 2px 8px rgba(251,191,36,0.6)'};
+  if(isPull&&isCons)return{bg:'radial-gradient(circle at 35% 30%,#ff9966,#cc3300)',color:'#fff',shadow:'0 2px 8px rgba(255,80,0,0.5)'};
+  if(isPull)        return{bg:'radial-gradient(circle at 35% 30%,#ff6b6b,#cc0033)',color:'#fff',shadow:'0 2px 8px rgba(255,50,50,0.5)'};
+  if(isCons)        return{bg:'radial-gradient(circle at 35% 30%,#66ffcc,#009966)',color:'#000',shadow:'0 2px 8px rgba(0,200,120,0.4)'};
+  return{bg:'radial-gradient(circle at 35% 30%,#1de9ff,#0077aa)',color:'#fff',shadow:'0 2px 8px rgba(0,229,255,0.4)'};
+}
+
+function getConsecutiveGroups(nums){
+  const s=[...nums].sort((a,b)=>a-b);
+  const groups=[];let cur=[s[0]];
+  for(let i=1;i<s.length;i++){
+    if(s[i]===s[i-1]+1)cur.push(s[i]);
+    else{if(cur.length>=2)groups.push(cur);cur=[s[i]];}
+  }
+  if(cur.length>=2)groups.push(cur);
+  return groups;
+}
+
+// =====================================================
+// ストレージ
+// =====================================================
+function setSaveLabel(t){
+  document.getElementById('save-label').textContent=t;
+  const dot=document.getElementById('save-dot');
+  dot.className='save-dot'+(extraData.length>0?' active':'');
+}
+function saveToStorage(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(extraData));setSaveLabel(`自動保存済 ✓ （追加${extraData.length}件）`);}
+  catch(e){setSaveLabel('保存エラー');}
+}
+function loadFromStorage(){
+  try{const r=localStorage.getItem(STORAGE_KEY);extraData=r?JSON.parse(r):[];setSaveLabel(extraData.length>0?`保存済 ✓ （追加${extraData.length}件）`:'ベースデータのみ');}
+  catch(e){extraData=[];}
+}
+function mergeData(){
+  const m=[...BASE_DATA,...extraData];m.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const s=new Set();allData=m.filter(d=>{if(s.has(d.date))return false;s.add(d.date);return true;});
+}
+function loadSavedSets(){try{return JSON.parse(localStorage.getItem(SAVED_KEY)||'[]');}catch(e){return[];}}
+function saveSavedSets(arr){localStorage.setItem(SAVED_KEY,JSON.stringify(arr));}
+
+// =====================================================
+// データ追加・削除
+// =====================================================
+function addNewResult(){
+  const date=document.getElementById('inp-date').value.trim();
+  const ids=['n1','n2','n3','n4','n5','n6','n7'];
+  const nums=ids.map(id=>parseInt(document.getElementById(id).value)||0);
+  const b1=parseInt(document.getElementById('b1').value)||0;
+  const b2=parseInt(document.getElementById('b2').value)||0;
+  const el=document.getElementById('add-result');
+  if(!date.match(/^\d{4}\/\d{2}\/\d{2}$/)){el.innerHTML='<div class="warn-banner">日付を正しく入力してください（例：2026/05/29）</div>';return;}
+  if(nums.some(n=>n<1||n>37)||new Set(nums).size!==7){el.innerHTML='<div class="warn-banner">本数字を1〜37の重複なし7個で入力してください</div>';return;}
+  if(allData.some(d=>d.date===date)){el.innerHTML='<div class="warn-banner">この日付のデータは既に登録されています</div>';return;}
+  extraData.push({date,nums:nums.sort((a,b)=>a-b),bonus:[b1,b2]});
+  saveToStorage();mergeData();renderAll();
+  el.innerHTML=`<div class="success-banner">✓ ${date} のデータを追加・保存しました！</div>`;
+  ['inp-date','n1','n2','n3','n4','n5','n6','n7','b1','b2'].forEach(id=>document.getElementById(id).value='');
+  setTimeout(()=>el.innerHTML='',3000);
+}
+function deleteEntry(date){
+  if(!confirm(`${date} のデータを削除しますか？`))return;
+  extraData=extraData.filter(d=>d.date!==date);saveToStorage();mergeData();renderAll();
+}
+function confirmReset(){
+  try{const raw=localStorage.getItem(STORAGE_KEY);const cur=raw?JSON.parse(raw):[];if(cur.length>0)extraData=[...cur];}catch(e){}
+  if(extraData.length===0){alert('追加データはありません。');return;}
+  if(!confirm(`追加した${extraData.length}件のデータをすべて削除しますか？\nベースデータ（${BASE_DATA.length}件）は残ります。`))return;
+  extraData=[];localStorage.removeItem(STORAGE_KEY);mergeData();renderAll();setSaveLabel('ベースデータのみ');
+}
+
+// =====================================================
+// 分析
+// =====================================================
+function getFrequency(data,recent=null){
+  const f={};for(let i=1;i<=37;i++)f[i]=0;
+  const sub=recent?data.slice(-recent):data;
+  sub.forEach(d=>d.nums.forEach(n=>{if(f[n]!==undefined)f[n]++;}));
+  return f;
+}
+function getCycleData(data){
+  const lastSeen={},gaps={};
+  for(let i=1;i<=37;i++){lastSeen[i]=null;gaps[i]=[];}
+  data.forEach((d,idx)=>{d.nums.forEach(n=>{if(lastSeen[n]!==null)gaps[n].push(idx-lastSeen[n]);lastSeen[n]=idx;});});
+  const total=data.length,result={};
+  for(let i=1;i<=37;i++){
+    const g=gaps[i];const avgGap=g.length>0?g.reduce((a,b)=>a+b,0)/g.length:total;
+    const lastIdx=lastSeen[i];const absence=lastIdx!==null?(total-1-lastIdx):total;
+    result[i]={total:data.filter(d=>d.nums.includes(i)).length,avgGap,lastIdx,absence,overdue:absence>avgGap};
+  }
+  return result;
+}
+function getZonePatterns(data){
+  const p={};
+  data.forEach(d=>{const z=[0,0,0,0];d.nums.forEach(n=>{if(n<=9)z[0]++;else if(n<=19)z[1]++;else if(n<=29)z[2]++;else z[3]++;});const k=z.join('-');p[k]=(p[k]||0)+1;});
+  return Object.entries(p).sort((a,b)=>b[1]-a[1]);
+}
+function getOddEven(data){
+  const r={};
+  data.forEach(d=>{const odd=d.nums.filter(n=>n%2!==0).length;const k=`${odd}奇${7-odd}偶`;r[k]=(r[k]||0)+1;});
+  return Object.entries(r).sort((a,b)=>b[1]-a[1]);
+}
+function scoreNumber(n,fa,fr,cd){
+  let s=0;s+=(fa[n]/allData.length)*30;const r=fr[n];s+=r>=4?25:r>=2?15:5;s+=cd[n].overdue?30:cd[n].absence>cd[n].avgGap*0.7?15:0;return s;
+}
+
+// =====================================================
+// 予想生成
+// =====================================================
+function getAutoAxes(scores){return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>parseInt(x[0]));}
+
+function generateOneSet(axes,scores,targetZones,strategy,cd,usedSets){
+  const getZone=n=>n<=9?0:n<=19?1:n<=29?2:3;
+  const allNums=Array.from({length:37},(_,i)=>i+1);
+  const stratFns=[
+    c=>c.sort((a,b)=>scores[b]-scores[a]),
+    c=>c.sort((a,b)=>(cd[b].absence/(cd[b].avgGap||1))-(cd[a].absence/(cd[a].avgGap||1))),
+    c=>c.sort((a,b)=>cd[b].absence-cd[a].absence),
+    c=>{c.sort((a,b)=>scores[b]-scores[a]);const t=c.slice(0,15);for(let i=t.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[t[i],t[j]]=[t[j],t[i]];}return[...t,...c.slice(15)];},
+    c=>{const bz=[[],[],[],[]];c.forEach(n=>bz[getZone(n)].push(n));bz.forEach(z=>{for(let i=z.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[z[i],z[j]]=[z[j],z[i]];}});const m=[];let a=true;while(a){a=false;bz.forEach(z=>{if(z.length>0){m.push(z.shift());a=true;}});}return m;},
+    c=>c.sort((a,b)=>scores[b]-scores[a]),
+    c=>{c.sort((a,b)=>scores[b]-scores[a]);return[...c.slice(5),...c.slice(0,5)];},
+    c=>c.sort(()=>Math.random()-0.5),
+  ];
+  const sortFn=stratFns[strategy%stratFns.length];
+  const sel=new Set(axes);const zc=[0,0,0,0];axes.forEach(n=>zc[getZone(n)]++);
+  for(let z=0;z<4;z++){let need=targetZones[z]-zc[z];if(need<=0)continue;let cands=allNums.filter(n=>getZone(n)===z&&!sel.has(n));cands=sortFn([...cands]);for(let i=0;i<need&&cands.length>0;i++)sel.add(cands.shift());}
+  while(sel.size<7){const rem=sortFn(allNums.filter(n=>!sel.has(n)));sel.add(rem[0]);}
+  let arr=[...sel].sort((a,b)=>a-b).slice(0,7);
+  if(strategy===5)arr=buildDeltaSet(axes,scores);
+  if(strategy<5){const hasCons=arr.some((n,i)=>i<arr.length-1&&arr[i+1]===n+1);if(!hasCons){for(const a of axes.filter(a=>arr.includes(a))){for(const nb of[a+1,a-1]){if(nb>=1&&nb<=37&&!arr.includes(nb)){const nA=arr.filter(n=>!axes.includes(n)).sort((a,b)=>scores[a]-scores[b]);if(nA.length>0){arr[arr.indexOf(nA[0])]=nb;arr.sort((a,b)=>a-b);break;}}}}}}
+  for(const used of usedSets){if(arr.filter(n=>used.includes(n)).length>=6){const ni=allNums.filter(n=>!arr.includes(n)&&!axes.includes(n));if(ni.length>0){const pick=ni[Math.floor(Math.random()*Math.min(10,ni.length))];const nA=arr.filter(n=>!axes.includes(n)).sort((a,b)=>scores[a]-scores[b]);if(nA.length>0){arr[arr.indexOf(nA[0])]=pick;arr.sort((a,b)=>a-b);}}}}
+  return arr;
+}
+
+function buildDeltaSet(axes,scores){
+  const allNums=Array.from({length:37},(_,i)=>i+1);
+  const sel=new Set(axes);let cur=[...axes].sort((a,b)=>a-b).pop();
+  let att=0;
+  while(sel.size<7&&att<50){att++;const delta=2+Math.floor(Math.random()*6);const nx=cur+delta;if(nx>=1&&nx<=37&&!sel.has(nx)){sel.add(nx);cur=nx;}else{const pv=cur-delta;if(pv>=1&&pv<=37&&!sel.has(pv)){sel.add(pv);cur=pv;}}}
+  while(sel.size<7){const rem=allNums.filter(n=>!sel.has(n)).sort((a,b)=>scores[b]-scores[a]);sel.add(rem[0]);}
+  return[...sel].sort((a,b)=>a-b).slice(0,7);
+}
+
+function generatePredictions(auto=false){
+  const fa=getFrequency(allData),fr=getFrequency(allData,10),cd=getCycleData(allData);
+  buildRankThresholds();
+  const scores={};for(let i=1;i<=37;i++)scores[i]=scoreNumber(i,fa,fr,cd);
+  let axes=auto?getAutoAxes(scores):[...selectedAxes];
+  if(axes.length===0)axes=getAutoAxes(scores);
+  const pats=getZonePatterns(allData);
+  const patVariants=[
+    pats[0][0].split('-').map(Number),
+    pats[Math.min(1,pats.length-1)][0].split('-').map(Number),
+    pats[Math.min(2,pats.length-1)][0].split('-').map(Number),
+    [2,2,2,1],[1,2,2,2],[2,1,2,2],[1,3,2,1],[2,2,1,2]
+  ];
+  const usedNums=[];const stratNames=['ホット重視','周期重視','リバウンド','ホット+乱数','帯域分散','デルタ法','中位重視','ランダム'];
+  const sets=[];
+  for(let s=0;s<8;s++){
+    const pick=generateOneSet(axes,scores,patVariants[s%patVariants.length],s,cd,usedNums);
+    usedNums.push([...pick]);
+    sets.push({nums:pick.sort((a,b)=>a-b),score:calcScore(pick,scores),strategy:stratNames[s%8]});
+  }
+  editSets=sets.map(s=>({...s,nums:[...s.nums]}));
+  originalSets=sets.map(s=>({...s,nums:[...s.nums]}));
+  currentAxes=[...axes];
+  currentLastNums=allData.length>0?[...allData[allData.length-1].nums]:[];
+  renderPredictions();
+}
+
+// =====================================================
+// ピッカー
+// =====================================================
+function openPicker(setIdx,ballIdx){
+  pickerState={setIdx,ballIdx};
+  const current=editSets[setIdx].nums[ballIdx];
+  const usedInSet=new Set(editSets[setIdx].nums);
+  document.getElementById('picker-title').textContent=`SET ${setIdx+1} ／ ボール${ballIdx+1} を変更`;
+  document.getElementById('picker-info').innerHTML=`現在: <b style="color:var(--gold);font-family:Orbitron,monospace;">${current}</b>　→　変更したい数字をタップ`;
+  const grid=document.getElementById('picker-grid');grid.innerHTML='';
+  for(let n=1;n<=37;n++){
+    const isCur=n===current,isUsed=usedInSet.has(n)&&n!==current;
+    grid.innerHTML+=`<div class="picker-num${isCur?' current':''}${isUsed?' used':''}" onclick="selectPickerNum(${n})">${n}</div>`;
+  }
+  document.getElementById('picker-overlay').style.display='flex';
+}
+function selectPickerNum(n){
+  const {setIdx,ballIdx}=pickerState;
+  editSets[setIdx].nums[ballIdx]=n;
+  editSets[setIdx].nums.sort((a,b)=>a-b);
+  closePicker(null,true);
+  const fa=getFrequency(allData),fr=getFrequency(allData,10),cd=getCycleData(allData);
+  const scores={};for(let i=1;i<=37;i++)scores[i]=scoreNumber(i,fa,fr,cd);
+  editSets[setIdx].score=calcScore(editSets[setIdx].nums,scores);
+  renderSetCard(setIdx);
+}
+function closePicker(e,force=false){
+  if(!force&&e&&e.target.id!=='picker-overlay')return;
+  document.getElementById('picker-overlay').style.display='none';
+}
+function resetSet(setIdx){
+  editSets[setIdx]={...originalSets[setIdx],nums:[...originalSets[setIdx].nums]};
+  renderSetCard(setIdx);
+}
+function sortSet(setIdx){
+  editSets[setIdx].nums.sort((a,b)=>a-b);
+  renderSetCard(setIdx);
+}
+
+// =====================================================
+// 予想描画
+// =====================================================
+function buildSetCardInner(setIdx){
+  const s=editSets[setIdx];
+  const sorted=[...s.nums].sort((a,b)=>a-b);
+  const pullCount=s.nums.filter(n=>currentLastNums.includes(n)).length;
+  const consCount=sorted.filter(n=>sorted.includes(n-1)||sorted.includes(n+1)).length;
+  const isModified=JSON.stringify(s.nums)!==JSON.stringify(originalSets[setIdx].nums);
+  const dupWith=[];editSets.forEach((os,i)=>{if(i!==setIdx&&os.nums.filter(n=>s.nums.includes(n)).length>=6)dupWith.push(i+1);});
+  const rk=scoreToRank(s.score);
+  return `
+    <div class="predict-set-header">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+        <div class="predict-set-num">SET ${setIdx+1}</div>
+        <span style="font-size:9px;color:var(--text-dim);">[${s.strategy}]</span>
+        ${isModified?`<span style="font-size:9px;background:rgba(251,191,36,0.12);color:var(--gold);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:2px 7px;">✏ 編集済</span>`:''}
+        ${dupWith.length>0?`<span class="dup-badge">SET${dupWith.join(',')}と被り多</span>`:''}
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <span style="font-size:9px;background:rgba(255,50,50,0.15);color:var(--hot);border:1px solid rgba(255,50,50,0.3);border-radius:10px;padding:2px 7px;">引${pullCount}</span>
+        <span style="font-size:9px;background:rgba(0,200,120,0.12);color:#00cc88;border:1px solid rgba(0,200,120,0.3);border-radius:10px;padding:2px 7px;">連${consCount}</span>
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--surface);border:2px solid ${rk.color};box-shadow:${rk.shadow};display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-weight:900;font-size:13px;color:${rk.color};">${rk.rank}</div>
+      </div>
+    </div>
+    <div class="balls-display">
+      ${s.nums.map((n,bi)=>{const st=getBallStyle(n,s.nums,currentAxes,currentLastNums);return`<div class="ball-wrap">
+        <div class="editable-ball" onclick="openPicker(${setIdx},${bi})" style="background:${st.bg};color:${st.color};box-shadow:${st.shadow};">${n}</div>
+        <div class="ball-sub">${st.label}</div>
+      </div>`;}).join('')}
+    </div>
+    <div class="edit-hint">▲ ボールをタップして数字を変更</div>
+    <div class="set-actions">
+      <button class="btn-sort" onclick="sortSet(${setIdx})">⇅ 昇順整列</button>
+      <button class="btn-reset" onclick="resetSet(${setIdx})">↺ 元に戻す</button>
+      <button class="btn-save" onclick="saveCustomSet(${setIdx})">★ このセットを保存</button>
+    </div>`;
+}
+function renderSetCard(setIdx){
+  const el=document.getElementById(`set-card-${setIdx}`);
+  if(el)el.innerHTML=buildSetCardInner(setIdx);
+}
+
+function renderPredictions(){
+  const lastDate=allData.length>0?allData[allData.length-1].date:'';
+  const legend=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+      <div style="font-size:9px;color:var(--text-dim);width:100%;letter-spacing:1px;margin-bottom:4px;">▌ 色の凡例 ／ ボールをタップで数字変更</div>
+      ${[{bg:'radial-gradient(circle at 35% 30%,#ffe066,#cc8800)',color:'#000',label:'軸',desc:'軸数字'},
+         {bg:'radial-gradient(circle at 35% 30%,#ff6b6b,#cc0033)',color:'#fff',label:'引',desc:'引っ張り'},
+         {bg:'radial-gradient(circle at 35% 30%,#66ffcc,#009966)',color:'#000',label:'連',desc:'連続数'},
+         {bg:'radial-gradient(circle at 35% 30%,#ff9966,#cc3300)',color:'#fff',label:'引連',desc:'引っ張り+連続'},
+         {bg:'radial-gradient(circle at 35% 30%,#1de9ff,#0077aa)',color:'#fff',label:'',desc:'通常'}
+      ].map(x=>`<div style="display:flex;align-items:center;gap:5px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:${x.bg};color:${x.color};display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:8px;font-weight:700;">${x.label||'N'}</div>
+        <span style="font-size:10px;color:var(--text-dim);">${x.desc}</span>
+      </div>`).join('')}
+    </div>`;
+
+  let setsHTML='';
+  for(let i=0;i<editSets.length;i++)setsHTML+=`<div class="predict-set" id="set-card-${i}">${buildSetCardInner(i)}</div>`;
+
+  document.getElementById('predictions-output').innerHTML=`
+    <div class="card">
+      <div class="card-title">▶ 生成予想 ${editSets.length}セット</div>
+      <div class="info-banner">
+        軸: ${currentAxes.map(n=>`<strong>${n}</strong>`).join(' ・ ')}　|　前回（${lastDate}）: <strong style="color:var(--hot)">${[...currentLastNums].sort((a,b)=>a-b).join('  ')}</strong>
+      </div>
+      ${legend}${setsHTML}
+    </div>
+    <div id="saved-sets-wrap">${renderSavedSets()}</div>`;
+}
+
+// =====================================================
+// カスタムセット保存
+// =====================================================
+function saveCustomSet(setIdx){
+  const s=editSets[setIdx];
+  const saved=loadSavedSets();
+  saved.unshift({
+    date:new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}),
+    nums:[...s.nums],score:s.score,strategy:s.strategy,
+    axes:[...currentAxes],lastNums:[...currentLastNums]
+  });
+  if(saved.length>20)saved.pop();
+  saveSavedSets(saved);
+  document.getElementById('saved-sets-wrap').innerHTML=renderSavedSets(true);
+}
+function deleteSavedSet(idx){
+  const saved=loadSavedSets();saved.splice(idx,1);saveSavedSets(saved);
+  document.getElementById('saved-sets-wrap').innerHTML=renderSavedSets();
+}
+function renderSavedSets(flash=false){
+  const saved=loadSavedSets();
+  if(saved.length===0)return'';
+  return`<div class="card">
+    <div class="card-title">▶ 保存したセット（${saved.length}件）</div>
+    ${saved.map((s,i)=>{
+      const rk=scoreToRank(s.score);
+      return`<div class="saved-set-item" style="${flash&&i===0?'border-color:var(--accent);':''}">
+        <div style="flex-shrink:0;">
+          <div class="saved-set-date">${s.date}</div>
+          <div style="font-size:8px;color:var(--text-dim);">${s.strategy}</div>
+          <div style="font-size:11px;font-family:Orbitron,monospace;font-weight:900;color:${rk.color};">${rk.rank}</div>
+        </div>
+        <div class="saved-set-balls">
+          ${s.nums.map(n=>{const st=getMiniStyle(n,s.nums,s.axes,s.lastNums);return`<div class="mini-ball" style="background:${st.bg};color:${st.color};box-shadow:${st.shadow};">${n}</div>`;}).join('')}
+        </div>
+        <button onclick="deleteSavedSet(${i})" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:14px;flex-shrink:0;padding:4px;">✕</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// =====================================================
+// レンダリング
+// =====================================================
+function renderAll(){
+  document.getElementById('total-rounds').textContent=allData.length;
+  renderFreqGrid();renderRanking();renderCycleTable();
+  renderZonePatterns();renderOddEven();renderConsAnalysis();
+  renderAxisSelector();renderDataPreview();
+}
+
+function renderFreqGrid(){
+  const fa=getFrequency(allData),fr=getFrequency(allData,10),mx=Math.max(...Object.values(fa));
+  // 全期間スコアで上位25%・50%の閾値を算出
+  const allVals=Object.values(fa).sort((a,b)=>a-b);
+  const th75=allVals[Math.floor(allVals.length*0.75)]; // 上位25%の下限
+  const th50=allVals[Math.floor(allVals.length*0.50)]; // 上位50%の下限
+  const el=document.getElementById('freq-grid');el.innerHTML='';
+  for(let i=1;i<=37;i++){
+    const total=fa[i],recent=fr[i];
+    const cls=total>=th75?'hot':total>=th50?'warm':recent===0?'cold':'neutral';
+    const pct=Math.round(total/mx*100);
+    el.innerHTML+=`<div class="num-cell ${cls}"><div class="num-label">${i}</div><div class="num-count">${total}回</div><div class="num-bar-wrap"><div class="num-bar" style="width:${pct}%"></div></div></div>`;
+  }
+}
+function renderRanking(){
+  const freq=getFrequency(allData),sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById('ranking-list').innerHTML=sorted.map(([n,c],i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="width:18px;font-family:Orbitron,monospace;font-size:9px;color:var(--text-dim);text-align:right;">${i+1}</div>
+      <div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#1de9ff,#0077aa);color:#fff;display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:11px;font-weight:700;">${n}</div>
+      <div style="flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${Math.round(c/sorted[0][1]*100)}%;background:linear-gradient(90deg,var(--accent),#0077aa);border-radius:4px;"></div></div>
+      <div style="font-size:11px;color:var(--text-dim);width:32px;text-align:right;">${c}回</div>
+    </div>`).join('');
+}
+function renderCycleTable(){
+  const cd=getCycleData(allData),sorted=Object.entries(cd).sort((a,b)=>b[1].absence/b[1].avgGap-a[1].absence/a[1].avgGap);
+  document.getElementById('cycle-tbody').innerHTML=sorted.map(([n,d])=>{
+    const ratio=d.absence/(d.avgGap||1),cls=ratio>1.2?'overdue':ratio>0.8?'due-soon':'fresh';
+    const last=d.lastIdx!==null?allData[d.lastIdx].date:'なし',star=ratio>1.2?'★★★':ratio>0.8?'★★':'★';
+    return`<tr><td><b style="font-family:Orbitron,monospace;">${n}</b></td><td>${d.total}</td><td>${d.avgGap.toFixed(1)}</td><td style="font-size:9px;">${last}</td><td class="${cls}">${d.absence}</td><td class="${cls}">${star}</td></tr>`;
+  }).join('');
+}
+function renderZonePatterns(){
+  const pats=getZonePatterns(allData),total=allData.length,cols=['#ff6b35','#00e5ff','#7c3aed','#fbbf24'];
+  document.getElementById('zone-pattern-list').innerHTML=pats.slice(0,8).map(([pat,cnt])=>{
+    const pct=Math.round(cnt/total*100),parts=pat.split('-');
+    return`<div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;"><div style="display:flex;gap:3px;align-items:center;">${parts.map((p,j)=>`<span style="font-family:Orbitron,monospace;font-size:11px;color:${cols[j]};border:1px solid ${cols[j]};border-radius:3px;padding:1px 5px;">${p}</span>`).join('<span style="color:var(--text-dim);font-size:9px;padding:0 1px;">-</span>')}</div><span style="font-size:10px;color:var(--text-dim);">${cnt}回 (${pct}%)</span></div><div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:3px;"></div></div></div>`;
+  }).join('');
+}
+function renderOddEven(){
+  const oe=getOddEven(allData),total=allData.length;
+  document.getElementById('odd-even-chart').innerHTML=oe.slice(0,6).map(([k,c])=>{
+    const pct=Math.round(c/total*100);
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><div style="width:66px;font-size:10px;color:var(--text-dim);">${k}</div><div style="flex:1;height:14px;background:var(--surface2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px;display:flex;align-items:center;padding-left:5px;"><span style="font-size:8px;font-weight:700;color:#000;">${pct}%</span></div></div><div style="width:28px;font-size:10px;color:var(--text-dim);text-align:right;">${c}</div></div>`;
+  }).join('');
+}
+
+function renderConsAnalysis(){
+  const recent=allData.slice(-20);
+  const zoneColors=[{label:'1-9',color:'#ff6b35'},{label:'10-19',color:'#00e5ff'},{label:'20-29',color:'#7c3aed'},{label:'30-37',color:'#fbbf24'}];
+  let html=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">`;
+  zoneColors.forEach(z=>html+=`<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-dim);"><div style="width:10px;height:10px;border-radius:2px;background:${z.color};opacity:0.8;"></div>${z.label}</div>`);
+  html+='</div>';
+
+  [...recent].reverse().forEach((d,ri)=>{
+    const i=recent.length-1-ri;
+    const roundNum=`第${allData.length-recent.length+i+1}回`;
+    const groups=getConsecutiveGroups(d.nums);
+    html+=`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">`;
+    html+=`<div style="flex-shrink:0;min-width:115px;"><div style="font-size:10px;color:var(--text-dim);">${d.date}</div><div style="font-size:9px;color:var(--text-dim);opacity:0.5;">${roundNum}</div></div>`;
+    if(groups.length===0){
+      html+=`<div style="color:var(--text-dim);font-size:11px;opacity:0.35;padding-top:2px;">— 該当なし</div>`;
+    }else{
+      html+=`<div style="display:flex;flex-wrap:wrap;gap:5px;">`;
+      groups.forEach(g=>{
+        const z=getZoneInfo(g[0]);
+        const lbl=`${g.length}連`;
+        html+=`<div style="display:flex;align-items:center;gap:3px;background:${z.bg};border:1px solid ${z.border};border-radius:8px;padding:4px 7px;">`;
+        g.forEach(n=>html+=`<div style="width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,${z.color}cc,${z.color}55);color:#fff;display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:9px;font-weight:700;border:1px solid ${z.border};">${n}</div>`);
+        html+=`<div style="font-size:10px;font-weight:700;color:${z.color};margin-left:2px;">${lbl}</div></div>`;
+      });
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+
+  // 統計
+  const allCons=allData.flatMap(d=>getConsecutiveGroups(d.nums));
+  const hitRate=Math.round(allData.filter(d=>getConsecutiveGroups(d.nums).length>0).length/allData.length*100);
+  const zoneCount={1:0,10:0,20:0,30:0};
+  allCons.forEach(g=>{const k=g[0]<=9?1:g[0]<=19?10:g[0]<=29?20:30;zoneCount[k]++;});
+  const tot=Object.values(zoneCount).reduce((a,b)=>a+b,0)||1;
+  html+=`<div style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+    <div style="font-family:Orbitron,monospace;font-size:9px;color:var(--accent);letter-spacing:2px;margin-bottom:10px;">STATS（全${allData.length}回）</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <div style="text-align:center;"><div style="font-family:Orbitron,monospace;font-size:20px;color:var(--gold);">${hitRate}%</div><div style="font-size:9px;color:var(--text-dim);">連続発生率</div></div>
+      ${[{k:1,label:'1-9',color:'#ff6b35'},{k:10,label:'10-19',color:'#00e5ff'},{k:20,label:'20-29',color:'#7c3aed'},{k:30,label:'30-37',color:'#fbbf24'}].map(z=>`
+      <div style="text-align:center;"><div style="font-family:Orbitron,monospace;font-size:20px;color:${z.color};">${Math.round(zoneCount[z.k]/tot*100)}%</div><div style="font-size:9px;color:var(--text-dim);">${z.label}</div></div>`).join('')}
+    </div>
+  </div>`;
+  document.getElementById('cons-analysis').innerHTML=html;
+}
+
+function renderAxisSelector(){
+  const fa=getFrequency(allData),fr=getFrequency(allData,10),cd=getCycleData(allData);
+  const scores={};for(let i=1;i<=37;i++)scores[i]=Math.round(scoreNumber(i,fa,fr,cd));
+  const el=document.getElementById('axis-selector');el.innerHTML='';
+  for(let i=1;i<=37;i++){const sel=selectedAxes.has(i);const rk=scoreToRank(scores[i]);
+    el.innerHTML+=`<div class="num-cell ${sel?'hot':'neutral'}" onclick="toggleAxis(${i})" style="cursor:pointer;${sel?'border-color:var(--gold);box-shadow:0 0 12px rgba(251,191,36,0.4);':''}"><div class="num-label" style="${sel?'color:var(--gold);':''}">${i}</div><div class="num-count" style="color:${rk.color};font-family:Orbitron,monospace;font-weight:700;">${rk.rank}</div></div>`;}
+}
+function toggleAxis(n){if(selectedAxes.has(n))selectedAxes.delete(n);else if(selectedAxes.size<3)selectedAxes.add(n);renderAxisSelector();}
+
+function renderDataPreview(){
+  document.getElementById('loaded-data-info').innerHTML=`<div class="info-banner">合計 <strong>${allData.length}回分</strong>（ベース${BASE_DATA.length}件 + 追加${extraData.length}件）<br>${allData[0].date} 〜 ${allData[allData.length-1].date}</div>`;
+  document.getElementById('data-preview-tbody').innerHTML=[...allData].reverse().map(d=>{
+    const isExtra=extraData.some(e=>e.date===d.date);
+    return`<tr style="${isExtra?'background:rgba(0,229,255,0.04);':''}"><td style="font-size:9px;">${d.date}${isExtra?` <span class="tag tag-new">NEW</span>`:''}</td>${[...d.nums].sort((a,b)=>a-b).map(n=>`<td style="font-family:Orbitron,monospace;font-size:10px;">${n}</td>`).join('')}<td style="color:var(--accent3);font-size:10px;">${d.bonus[0]}</td><td style="color:var(--accent3);font-size:10px;">${d.bonus[1]}</td><td>${isExtra?`<button onclick="deleteEntry('${d.date}')" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:12px;">✕</button>`:''}</td></tr>`;
+  }).join('');
+}
+
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');
+}
+
+// =====================================================
+// 起動
+// =====================================================
+loadFromStorage();mergeData();buildRankThresholds();renderAll();
+</script>
+</body>
+</html>
