@@ -1,0 +1,20 @@
+{
+  "name": "ロト7",
+  "short_name": "ロト7",
+  "icons": [
+    {
+      "src": "ロト7アイコン（王冠+7）.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "ロト7アイコン（王冠+7）.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#060a12",
+  "theme_color": "#ffffff"
+}
