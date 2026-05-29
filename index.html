@@ -1323,7 +1323,12 @@ function renderRoundCard(roundIdx,setIdx){
 function renderAllRounds(){
   const el=document.getElementById('predictions-output');
   if(!el)return;
-  if(allRounds.length===0){el.innerHTML='';return;}
+  if(allRounds.length===0){
+    // ラウンドが空でも共有パネルと保存セットは残す
+    el.innerHTML='<div id="share-panel-wrap">'+renderSharePanel()+'</div>'
+      +'<div id="saved-sets-wrap">'+renderSavedSets()+'</div>';
+    return;
+  }
 
   const totalSets=allRounds.reduce((s,r)=>s+r.editSets.length,0);
   const lastDate=allData.length>0?allData[allData.length-1].date:'';
