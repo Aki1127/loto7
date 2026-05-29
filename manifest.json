@@ -3,7 +3,7 @@
   "short_name": "ロト7",
   "description": "ロト7出現頻度・周期・予想 総合分析",
   "start_url": "/loto7/",
-  "display": "browser",
+  "display": "minimal-ui",
   "background_color": "#060b12",
   "theme_color": "#ffbb35",
   "icons": [
