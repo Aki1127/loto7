@@ -115,6 +115,17 @@
     .saved-set-date{font-size:9px;color:var(--text-dim);flex-shrink:0;}
     .saved-set-balls{display:flex;gap:4px;flex-wrap:wrap;flex:1;}
     .mini-ball{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:7px;font-weight:700;flex-shrink:0;}
+    .mini-ball.hit{background:radial-gradient(circle at 35% 30%,#00ff88,#008844)!important;color:#000!important;box-shadow:0 0 10px rgba(0,255,136,0.7)!important;}
+    .mini-ball.bonus-hit{background:radial-gradient(circle at 35% 30%,#88ffcc,#004422)!important;color:#000!important;box-shadow:0 0 8px rgba(0,255,136,0.5)!important;}
+    .prize-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;font-family:'Orbitron',monospace;margin-top:4px;}
+    .prize-1{background:rgba(251,191,36,0.2);border:1px solid #fbdf24;color:#fbdf24;}
+    .prize-2{background:rgba(200,160,255,0.2);border:1px solid #c8a0ff;color:#c8a0ff;}
+    .prize-3{background:rgba(255,107,53,0.2);border:1px solid #ff6b35;color:#ff6b35;}
+    .prize-4{background:rgba(0,229,255,0.15);border:1px solid #00e5ff;color:#00e5ff;}
+    .prize-5{background:rgba(128,181,255,0.15);border:1px solid #80b5ff;color:#80b5ff;}
+    .prize-6{background:rgba(100,200,100,0.15);border:1px solid #64c864;color:#64c864;}
+    .prize-7{background:rgba(107,140,170,0.15);border:1px solid #6b8caa;color:#6b8caa;}
+    .prize-input{background:var(--surface2);border:1px solid var(--border);color:var(--accent2);border-radius:5px;padding:2px 6px;font-size:10px;font-family:'Orbitron',monospace;width:90px;text-align:right;}
 
     /* ===== 重み付けパネル ===== */
     .weight-panel{background:var(--surface2);border:2px solid rgba(128,181,255,0.25);border-radius:12px;padding:14px;margin-bottom:10px;position:relative;}
@@ -505,6 +516,38 @@ function setCycleRange(range, btn){
   document.querySelectorAll('.cycle-range-btn').forEach(b=>b.classList.remove('cycle-range-active'));
   btn.classList.add('cycle-range-active');
   renderCycleTable();
+}
+
+// ===== 当選照合 =====
+function checkPrize(nums, winNums, bonusNums){
+  const hits=nums.filter(n=>winNums.includes(n)).length;
+  const bonusHits=nums.filter(n=>bonusNums.includes(n)).length;
+  if(hits===7)return{grade:1,label:'1等',cls:'prize-1',amount:null,auto:false};
+  if(hits===6&&bonusHits>=1)return{grade:2,label:'2等',cls:'prize-2',amount:null,auto:false};
+  if(hits===6)return{grade:3,label:'3等',cls:'prize-3',amount:1000000,auto:true};
+  if(hits===5&&bonusHits>=1)return{grade:4,label:'4等',cls:'prize-4',amount:9100,auto:true};
+  if(hits===5)return{grade:4,label:'4等',cls:'prize-4',amount:9100,auto:true};
+  if(hits===4)return{grade:5,label:'5等',cls:'prize-5',amount:1400,auto:true};
+  if(hits===3&&bonusHits>=1)return{grade:6,label:'6等',cls:'prize-6',amount:1000,auto:true};
+  if(hits===3)return{grade:7,label:'7等',cls:'prize-7',amount:800,auto:true};
+  return null;
+}
+
+function getLatestWinData(){
+  if(allData.length===0)return null;
+  const last=allData[allData.length-1];
+  return{date:last.date,nums:last.nums,bonus:last.bonus||[]};
+}
+
+function enterPrizeAmount(idx){
+  const saved=loadSavedSets();
+  if(!saved[idx])return;
+  const amount=prompt('1等または2等の当選金額を入力してください（円）:', saved[idx].prizeAmount||'');
+  if(amount===null)return;
+  saved[idx].prizeAmount=parseInt(amount.replace(/,/g,''))||0;
+  saveSavedSets(saved);
+  const wrap=document.getElementById('saved-sets-wrap');
+  if(wrap)wrap.innerHTML=renderSavedSets();
 }
 
 // ===== 連続数設定 =====
@@ -1531,23 +1574,81 @@ function deleteSavedSet(idx){
 
 function renderSavedSets(flash=false){
   const saved=loadSavedSets();
-  if(saved.length===0)return`<div class="card"><div class="card-title">保存したセット (0件)</div></div>`;
-  var sh='<div class="card"><div class="card-title">保存したセット ('+saved.length+'件)</div>';
+  if(saved.length===0)return'<div class="card"><div class="card-title">保存したセット (0件)</div></div>';
+
+  // 最新の当選番号を取得
+  const winData=getLatestWinData();
+
+  var sh='<div class="card">';
+  sh+='<div class="card-title">保存したセット ('+saved.length+'件)</div>';
+  if(winData){
+    sh+='<div style="font-size:9px;color:var(--text-dim);text-align:center;margin-bottom:8px;padding:4px 8px;background:var(--surface1);border-radius:6px;">';
+    sh+='照合: <span style="color:var(--accent2);">'+winData.date+'</span> 当選 ';
+    sh+=winData.nums.map(n=>'<span style="color:var(--gold);font-family:Orbitron,monospace;">'+n+'</span>').join(' ');
+    sh+=' B:'+winData.bonus.map(n=>'<span style="color:#88ffcc;font-family:Orbitron,monospace;">'+n+'</span>').join(' ');
+    sh+='</div>';
+  }
+
   saved.forEach(function(s,i){
     const rk=scoreToRank(s.score||0);
     const border=flash&&i===0?'border-color:var(--accent);':'';
-    sh+='<div class="saved-set-item" style="'+border+'">';
+
+    // 当選照合
+    var prize=null;
+    if(winData){
+      prize=checkPrize(s.nums, winData.nums, winData.bonus);
+    }
+
+    // 当選した場合は枠を緑色に
+    var itemStyle=border;
+    if(prize)itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
+
+    sh+='<div class="saved-set-item" style="'+itemStyle+'">';
     sh+='<div style="flex-shrink:0;">';
     sh+='<div class="saved-set-date">'+s.date+'</div>';
     sh+='<div style="font-size:9px;color:var(--text-dim);margin-top:2px;">'+(s.strategy||'')+'</div>';
     sh+='<div style="font-size:9px;font-family:Orbitron,monospace;font-weight:900;color:'+rk.color+';">'+rk.rank+'</div>';
+
+    // 等級・金額表示
+    if(prize){
+      sh+='<div class="prize-badge '+prize.cls+'">'+prize.label;
+      if(prize.auto&&prize.amount){
+        sh+=' '+prize.amount.toLocaleString()+'円';
+      } else if(!prize.auto){
+        // 1等・2等：手入力
+        var inputVal=s.prizeAmount?s.prizeAmount.toLocaleString():'金額入力';
+        sh+=' <input class="prize-input" type="text" value="'+inputVal+'" onclick="enterPrizeAmount('+i+')" readonly placeholder="金額入力">';
+      }
+      sh+='</div>';
+    }
+
     sh+='</div><div class="saved-set-balls">';
     s.nums.forEach(function(n){
-      const st=getMiniStyle(n,s.nums,s.axes||[],s.lastNums||[]);
-      const clr=st.color?'color:'+st.color+';':'';
-      sh+='<div class="mini-ball" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';">'+n+'</div>';
+      // 当選番号と一致する場合は緑ボール
+      var isHit=winData&&winData.nums.includes(n);
+      var isBonus=winData&&winData.bonus.includes(n)&&!isHit;
+      if(isHit){
+        sh+='<div class="mini-ball hit">'+n+'</div>';
+      } else if(isBonus){
+        sh+='<div class="mini-ball bonus-hit">'+n+'</div>';
+      } else {
+        const st=getMiniStyle(n,s.nums,s.axes||[],s.lastNums||[]);
+        const clr=st.color?'color:'+st.color+';':'';
+        sh+='<div class="mini-ball" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';">'+n+'</div>';
+      }
     });
     sh+='</div>';
+
+    // 一致数表示
+    if(winData){
+      const hitCount=s.nums.filter(n=>winData.nums.includes(n)).length;
+      const bonusCount=s.nums.filter(n=>winData.bonus.includes(n)).length;
+      sh+='<div style="font-size:8px;color:var(--text-dim);text-align:center;margin-top:2px;">';
+      sh+=hitCount>0?'<span style="color:#00ff88;">'+hitCount+'個一致</span>':'0個一致';
+      if(bonusCount>0)sh+=' <span style="color:#88ffcc;">B'+bonusCount+'</span>';
+      sh+='</div>';
+    }
+
     sh+='<button onclick="deleteSavedSet('+i+')" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:14px;flex-shrink:0;padding:4px;">x</button>';
     sh+='</div>';
   });
