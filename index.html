@@ -795,20 +795,20 @@ function saveSavedSets(arr){localStorage.setItem(SAVED_KEY,JSON.stringify(arr));
 // データ追加・削除
 // --------------------------------------------------------
 function addNewResult(){
-  const date=document.getElementById('inp-date').value.trim();
-  const ids=['n1','n2','n3','n4','n5','n6','n7'];
+  const date=document.getElementById("inp-date").value.trim();
+  const ids=["n1","n2","n3","n4","n5","n6","n7"];
   const nums=ids.map(id=>parseInt(document.getElementById(id).value)||0);
-  const b1=parseInt(document.getElementById('b1').value)||0;
-  const b2=parseInt(document.getElementById('b2').value)||0;
-  const el=document.getElementById('add-result');
-  if(!date.match(/^\d{4}\/\d{2}\/\d{2}/)){el.innerHTML='<div class="warn-banner">日付を正しく入力してください (例: 2026/05/29) </div>';return;}
+  const b1=parseInt(document.getElementById("b1").value)||0;
+  const b2=parseInt(document.getElementById("b2").value)||0;
+  const el=document.getElementById("add-result");
+  if(!date.match(/^\d{4}\/\d{2}\/\d{2}/)){el.innerHTML='<div class="warn-banner">日付を正しく入力してください (例: 2026/05/29)</div>';return;}
   if(nums.some(n=>n<1)||new Set(nums).size<7){el.innerHTML='<div class="warn-banner">本数字を1〜37の7個入力してください</div>';return;}
   if(allData.some(d=>d.date===date)){el.innerHTML='<div class="warn-banner">この日付のデータは既に登録されています</div>';return;}
   extraData.push({date,nums:nums.sort((a,b)=>a-b),bonus:[b1,b2]});
   saveToStorage();mergeData();renderAll();
-  el.innerHTML=`<div class="success-banner">✓ ${date} のデータを追加・保存しました！</div>`;
-  ['inp-date','n1','n2','n3','n4','n5','n6','n7','b1','b2'].forEach(id=>document.getElementById(id).value='');
-  setTimeout(()=>el.innerHTML='',3000);
+  el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！</div>';
+  ["inp-date","n1","n2","n3","n4","n5","n6","n7","b1","b2"].forEach(id=>document.getElementById(id).value="");
+  setTimeout(()=>el.innerHTML="",3000);
 }
 function deleteEntry(date){
   if(!confirm(`${date} のデータを削除しますか？`))return;
@@ -1207,76 +1207,66 @@ function buildSetCardInnerR(roundIdx,setIdx){
   const isDupWith=rnd.editSets.map((x,i)=>[i,JSON.stringify([...x.nums].sort())==JSON.stringify([...s.nums].sort())]).filter(([i,v])=>v&&i!==setIdx);
   const overlapWith=rnd.editSets.reduce((acc,ss,i)=>{if(i!==setIdx&&ss.nums.filter(n=>s.nums.includes(n)).length>=5)acc.push(i+1);return acc;},[]);
   const rk=scoreToRank(s.score||0);
-  return`
-    <div class="predict-set-header">
-      <div>
-        <span style="font-size:9px;color:var(--text-dim);">R${roundIdx+1}-${setIdx+1}</span>
-        <div style="font-size:9px;color:var(--text-dim);">${s.strategy}</div>
-      </div>
-      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
-        ${crossDup?'<span class="dup-across">他R重複</span>':''}
-        ${isDupWith.length?'<span class="dup-badge">⚠ 重複</span>':''}
-        ${overlapWith.length?`<span class="dup-badge">5個一致:${overlapWith.join(',')}</span>`:''}
-        <span style="font-size:9px;background:rgba(255,90,50,0.15);color:var(--hot);border:2px solid rgba(255,90,50,0.3);border-radius:4px;padding:2px 6px;">軸${pullCount}</span>
-        <div style="width:22px;height:22px;border-radius:50%;background:var(--surface1);border:2px solid ${rk.color};display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-weight:900;font-size:10px;color:${rk.color};">${rk.rank}</div>
-      </div>
-    </div>
-    <div class="balls-display">
-      ${s.nums.map((n,bi)=>{const st=getBallStyle(n,s.nums,axes,lastNums);return`<div class="ball-wrap"><div class="editable-ball" onclick="openPicker(${setIdx},${bi},${roundIdx})" style="background:${st.bg};${st.color?'color:'+st.color+';':''}box-shadow:${st.shadow};">${n}</div><div class="ball-sub">${st.label}</div></div>`;}).join('')}
-    </div>
-    <div class="edit-hint">☝ ボールをタップして変更</div>
-    <div class="set-actions">
-      <button class="btn btn-sm" onclick="resetSet(${setIdx},${roundIdx})" style="background:var(--surface1);color:var(--accent2);border:1px solid rgba(251,191,36,0.4);">元に戻す</button>
-      <button class="btn btn-sm" onclick="deleteSetFromRound(${roundIdx},${setIdx})" style="background:var(--surface1);color:var(--hot);border:1px solid rgba(239,68,68,0.4);">🗑 削除</button>
-      <button class="btn btn-sm" onclick="saveOneSet(${roundIdx},${setIdx})" style="background:var(--surface1);color:var(--accent);border:1px solid rgba(128,181,255,0.3);">★ 保存</button>
-    </div>
-  `;
+  var h='';
+  h+='<div class="predict-set-header">';
+  h+='<div>';
+  h+='<span style="font-size:9px;color:var(--text-dim);">R'+(roundIdx+1)+'-'+(setIdx+1)+'</span>';
+  h+='<div style="font-size:9px;color:var(--text-dim);">'+s.strategy+'</div>';
+  h+='</div>';
+  h+='<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">';
+  if(crossDup)h+='<span class="dup-across">他R重複</span>';
+  if(isDupWith.length)h+='<span class="dup-badge">重複</span>';
+  if(overlapWith.length)h+='<span class="dup-badge">5個一致:'+overlapWith.join(',')+'</span>';
+  h+='<span style="font-size:9px;background:rgba(255,90,50,0.15);color:var(--hot);border:2px solid rgba(255,90,50,0.3);border-radius:4px;padding:2px 6px;">軸'+pullCount+'</span>';
+  h+='<div style="width:22px;height:22px;border-radius:50%;background:var(--surface1);border:2px solid '+rk.color+';display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-weight:900;font-size:10px;color:'+rk.color+';">'+rk.rank+'</div>';
+  h+='</div></div>';
+  h+='<div class="balls-display">';
+  s.nums.forEach(function(n,bi){
+    var st=getBallStyle(n,s.nums,axes,lastNums);
+    var clr=st.color?'color:'+st.color+';':'';
+    h+='<div class="ball-wrap"><div class="editable-ball" onclick="openPicker('+setIdx+','+bi+','+roundIdx+')" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';">'+n+'</div><div class="ball-sub">'+st.label+'</div></div>';
+  });
+  h+='</div>';
+  h+='<div class="edit-hint">&#x261D; ボールをタップして変更</div>';
+  h+='<div class="set-actions">';
+  h+='<button class="btn btn-sm" onclick="resetSet('+setIdx+','+roundIdx+')" style="background:var(--surface1);color:var(--accent2);border:1px solid rgba(251,191,36,0.4);">元に戻す</button>';
+  h+='<button class="btn btn-sm" onclick="deleteSetFromRound('+roundIdx+','+setIdx+')" style="background:var(--surface1);color:var(--hot);border:1px solid rgba(239,68,68,0.4);">削除</button>';
+  h+='<button class="btn btn-sm" onclick="saveOneSet('+roundIdx+','+setIdx+')" style="background:var(--surface1);color:var(--accent);border:1px solid rgba(128,181,255,0.3);">★ 保存</button>';
+  h+='</div>';
+  return h;
 }
 
 function buildSetCardInner(setIdx){
   const s=editSets[setIdx];
-  const sorted=[...s.nums].sort((a,b)=>a-b);
   const pullCount=s.nums.filter(n=>(currentAxes||[]).includes(n)).length;
   const isDupWith=editSets.map((x,i)=>[i,JSON.stringify([...x.nums].sort())==JSON.stringify([...s.nums].sort())]).filter(([i,v])=>v&&i!==setIdx);
   const overlapWith=editSets.reduce((acc,ss,i)=>{if(i!==setIdx&&ss.nums.filter(n=>s.nums.includes(n)).length>=5)acc.push(i+1);return acc;},[]);
   const rk=scoreToRank(s.score||0);
-  return`
-    <div class="predict-set-header">
-      <div>
-        <span style="font-size:9px;color:var(--text-dim);">セット${setIdx+1}</span>
-        <div style="font-size:9px;color:var(--text-dim);">${s.strategy}</div>
-      </div>
-      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
-        ${isDupWith.length?`<span class="dup-badge">⚠ 重複</span>`:''}
-        ${overlapWith.length?`<span class="dup-badge">5個一致:${overlapWith.join(',')}</span>`:''}
-        <span style="font-size:9px;background:rgba(255,90,50,0.15);color:var(--hot);border:2px solid rgba(255,90,50,0.3);border-radius:4px;padding:2px 6px;">軸${pullCount}</span>
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--surface1);border:2px solid ${rk.color};box-shadow:${rk.shadow};display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-weight:900;font-size:11px;color:${rk.color};">${rk.rank}</div>
-      </div>
-    </div>
-    <div class="balls-display">
-      ${s.nums.map((n,bi)=>{const st=getBallStyle(n,s.nums,currentAxes,currentLastNums);return`<div class="ball-wrap"><div class="editable-ball" onclick="openPicker(${setIdx},${bi})" style="background:${st.bg};${st.color?'color:'+st.color+';':''}box-shadow:${st.shadow};">${n}</div><div class="ball-sub">${st.label}</div></div>`;}).join('')}
-    </div>
-    <div class="edit-hint">☝ ボールをタップして数字を変更</div>
-    <div class="set-actions">
-      <button class="btn btn-sm" onclick="resetSet(${setIdx})" style="background:var(--surface1);color:var(--accent2);border:1px solid rgba(251,191,36,0.4);">元に戻す</button>
-      <button class="btn btn-sm" onclick="deleteSetFromRound(allRounds.length-1,${setIdx})" style="background:var(--surface1);color:var(--hot);border:1px solid rgba(239,68,68,0.4);">🗑 削除</button>
-      <button class="btn btn-sm" onclick="saveCustomSet(${setIdx})" style="background:var(--surface1);color:var(--accent);border:1px solid rgba(128,181,255,0.3);">★ 保存</button>
-    </div>
-  `;
+  var h='';
+  h+='<div class="predict-set-header"><div>';
+  h+='<span style="font-size:9px;color:var(--text-dim);">セット'+(setIdx+1)+'</span>';
+  h+='<div style="font-size:9px;color:var(--text-dim);">'+s.strategy+'</div></div>';
+  h+='<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">';
+  if(isDupWith.length)h+='<span class="dup-badge">重複</span>';
+  if(overlapWith.length)h+='<span class="dup-badge">5個一致:'+overlapWith.join(',')+'</span>';
+  h+='<span style="font-size:9px;background:rgba(255,90,50,0.15);color:var(--hot);border:2px solid rgba(255,90,50,0.3);border-radius:4px;padding:2px 6px;">軸'+pullCount+'</span>';
+  h+='<div style="width:26px;height:26px;border-radius:50%;background:var(--surface1);border:2px solid '+rk.color+';box-shadow:'+rk.shadow+';display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-weight:900;font-size:11px;color:'+rk.color+';">'+rk.rank+'</div>';
+  h+='</div></div>';
+  h+='<div class="balls-display">';
+  s.nums.forEach(function(n,bi){
+    var st=getBallStyle(n,s.nums,currentAxes,currentLastNums);
+    var clr=st.color?'color:'+st.color+';':'';
+    h+='<div class="ball-wrap"><div class="editable-ball" onclick="openPicker('+setIdx+','+bi+')" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';">'+n+'</div><div class="ball-sub">'+st.label+'</div></div>';
+  });
+  h+='</div>';
+  h+='<div class="edit-hint">&#x261D; ボールをタップして変更</div>';
+  h+='<div class="set-actions">';
+  h+='<button class="btn btn-sm" onclick="resetSet('+setIdx+')" style="background:var(--surface1);color:var(--accent2);border:1px solid rgba(251,191,36,0.4);">元に戻す</button>';
+  h+='<button class="btn btn-sm" onclick="deleteSetFromRound(allRounds.length-1,'+setIdx+')" style="background:var(--surface1);color:var(--hot);border:1px solid rgba(239,68,68,0.4);">削除</button>';
+  h+='<button class="btn btn-sm" onclick="saveCustomSet('+setIdx+')" style="background:var(--surface1);color:var(--accent);border:1px solid rgba(128,181,255,0.3);">★ 保存</button>';
+  h+='</div>';
+  return h;
 }
-
-function deleteSetFromRound(roundIdx,setIdx){
-  if(roundIdx===undefined) roundIdx=allRounds.length-1;
-  if(roundIdx<0||!allRounds[roundIdx])return;
-  allRounds[roundIdx].editSets.splice(setIdx,1);
-  allRounds[roundIdx].originalSets.splice(setIdx,1);
-  if(allRounds[roundIdx].editSets.length===0){
-    allRounds.splice(roundIdx,1);
-  }
-  saveRoundsToStorage();
-  renderAllRounds();
-}
-
 function renderSetCard(setIdx){
   const el=document.getElementById(`set-card-${setIdx}`);
   if(el)el.innerHTML=buildSetCardInner(setIdx);
@@ -1312,26 +1302,25 @@ function renderAllRounds(){
   allRounds.forEach((rnd,ri)=>{
     const rk_counts={S:0,A:0,B:0,C:0};
     rnd.editSets.forEach(s=>{const r=scoreToRank(s.score||0);rk_counts[r.rank]++;});
-    html+=`<div>
-      <div class="round-header">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="round-label">ROUND ${ri+1}</span>
-          <span class="round-badge" style="color:var(--accent2);border-color:rgba(251,187,53,0.4);">${rnd.editSets.length}セット</span>
-          <span style="font-size:9px;color:var(--text-dim);">
-            ${Object.entries(rk_counts).filter(([,v])=>v>0).map(([k,v])=>`<span style="color:${scoreToRank(k==='S'?999:k==='A'?500:k==='B'?200:0).color}">${k}×${v}</span>`).join(' ')}
-          </span>
-        </div>
-        <div class="round-actions">
-          <button class="round-btn" onclick="saveRound(${ri})">★ R${ri+1}を保存</button>
-          <button class="round-btn danger" onclick="deleteRound(${ri})">✕ 削除</button>
-        </div>
-      </div>
-      <div class="round-container">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;">
-          ${rnd.editSets.map((_,si)=>`<div class="predict-set" id="set-card-${ri}-${si}">${buildSetCardInnerR(ri,si)}</div>`).join('')}
-        </div>
-      </div>
-    </div>`;
+    var rh='<div><div class="round-header">';
+    rh+='<div style="display:flex;align-items:center;gap:8px;">';
+    rh+='<span class="round-label">ROUND '+(ri+1)+'</span>';
+    rh+='<span class="round-badge" style="color:var(--accent2);border-color:rgba(251,187,53,0.4);">'+rnd.editSets.length+'セット</span>';
+    rh+='<span style="font-size:9px;color:var(--text-dim);">';
+    Object.entries(rk_counts).filter(([,v])=>v>0).forEach(([k,v])=>{
+      rh+='<span style="color:'+scoreToRank(k==='S'?999:k==='A'?500:k==='B'?200:0).color+'">'+k+'x'+v+'</span> ';
+    });
+    rh+='</span></div>';
+    rh+='<div class="round-actions">';
+    rh+='<button class="round-btn" onclick="saveRound('+ri+')">★ R'+(ri+1)+'を保存</button>';
+    rh+='<button class="round-btn danger" onclick="deleteRound('+ri+')">削除</button>';
+    rh+='</div></div>';
+    rh+='<div class="round-container"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;">';
+    rnd.editSets.forEach(function(_,si){
+      rh+='<div class="predict-set" id="set-card-'+ri+'-'+si+'">'+buildSetCardInnerR(ri,si)+'</div>';
+    });
+    rh+='</div></div></div>';
+    html+=rh;
   });
 
   // 保存済みセット
@@ -1342,16 +1331,18 @@ function renderAllRounds(){
 
 // ===== 共有機能 =====
 function renderSharePanel(){
-  return`<div class="share-panel">
-    <div class="share-title">📤 保存セットの共有（PC↔スマホ）</div>
-    <textarea class="share-textarea" id="share-textarea" placeholder="① コピーボタンでテキストをコピー&#10;② LINEやメモ帳で自分に送信&#10;③ 受け取った側で貼り付けて「読み込む」ボタンを押す"></textarea>
-    <div class="share-btn-row">
-      <button class="share-btn primary" onclick="copyShareText()">📋 保存セットをコピー</button>
-      <button class="share-btn" onclick="importShareText()">📥 貼り付けて読み込む</button>
-      <button class="share-btn" onclick="clearShareText()">✕ クリア</button>
-    </div>
-    <div id="share-msg" style="font-size:9px;color:var(--accent2);margin-top:6px;min-height:14px;"></div>
-  </div>`;
+  var html='';
+  html+='<div class="share-panel">';
+  html+='<div class="share-title">PC&#x21D4;&#x30B9;&#x30DE;&#x30DB; &#x4FDD;&#x5B58;&#x30BB;&#x30C3;&#x30C8;&#x5171;&#x6709;</div>';
+  html+='<textarea class="share-textarea" id="share-textarea" placeholder="(1)&#x30B3;&#x30D4;&#x30FC;&#x30DC;&#x30BF;&#x30F3;&#x3067;&#x30C6;&#x30AD;&#x30B9;&#x30C8;&#x3092;&#x30B3;&#x30D4;&#x30FC; (2)LINE&#x3084;&#x30E1;&#x30E2;&#x5E33;&#x3067;&#x9001;&#x4FE1; (3)&#x8CBF;&#x308A;&#x4ED8;&#x3051;&#x3066;&#x8AAD;&#x307F;&#x8FBC;&#x3080;"></textarea>';
+  html+='<div class="share-btn-row">';
+  html+='<button class="share-btn primary" onclick="copyShareText()">&#x30B3;&#x30D4;&#x30FC;</button>';
+  html+='<button class="share-btn" onclick="importShareText()">&#x8AAD;&#x307F;&#x8FBC;&#x3080;</button>';
+  html+='<button class="share-btn" onclick="clearShareText()">&#x30AF;&#x30EA;&#x30A2;</button>';
+  html+='</div>';
+  html+='<div id="share-msg" style="font-size:9px;color:var(--accent2);margin-top:6px;min-height:14px;"></div>';
+  html+='</div>';
+  return html;
 }
 
 function copyShareText(){
@@ -1363,8 +1354,7 @@ function copyShareText(){
     lines.push(`数字: ${s.nums.join(', ')}`);
     lines.push('');
   });
-  const text=lines.join('
-');
+  const text=lines.join('\n');
   navigator.clipboard.writeText(text).then(()=>{
     const el=document.getElementById('share-textarea');
     if(el)el.value=text;
@@ -1383,10 +1373,9 @@ function importShareText(){
   const text=el.value;
   const saved=loadSavedSets();
   let count=0;
-  const lines=text.split('
-');
+  const textLines=text.split('\n');
   let current=null;
-  lines.forEach(line=>{
+  textLines.forEach(line=>{
     line=line.trim();
     if(line.match(/^\[\d+\]/)){
       // 新しいセットの開始
@@ -1514,14 +1503,16 @@ function renderPredictions(){
       ].map(x=>`<div style="display:flex;align-items:center;gap:4px;"><div style="width:20px;height:20px;border-radius:50%;background:${x.bg};display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:7px;font-weight:700;color:${x.color};">${x.label}</div><span style="font-size:9px;color:var(--text-dim);">${x.desc}</span></div>`).join('')}
     </div>`;
   let setsHTML='';
-  for(let i=0;i<editSets.length;i++)setsHTML+=`<div class="predict-set" id="set-card-${i}">${buildSetCardInner(i)}</div>`;
-  document.getElementById('predictions-output').innerHTML=`
-    <div class="card">
-      <div class="card-title">生成予想 ${editSets.length}セット</div>
-      <div class="info-banner">🎯 ${(currentAxes||[]).map(n=>`<strong>${n}</strong>`).join(' · ')} | 前回 ${lastDate}: <strong style="color:var(--hot)">${[...(currentLastNums||[])].sort((a,b)=>a-b).join(' ')}</strong></div>
-      ${legend}${setsHTML}
-      <div id="saved-sets-wrap">${renderSavedSets()}</div>
-    </div>`;
+  for(let i=0;i<editSets.length;i++)setsHTML+='<div class="predict-set" id="set-card-'+i+'">'+buildSetCardInner(i)+'</div>';
+  const axesStr=(currentAxes||[]).map(n=>'<strong>'+n+'</strong>').join(' · ');
+  const lastNumsStr=[...(currentLastNums||[])].sort((a,b)=>a-b).join(' ');
+  document.getElementById('predictions-output').innerHTML=
+    '<div class="card">'
+    +'<div class="card-title">生成予想 '+editSets.length+'セット</div>'
+    +'<div class="info-banner">'+axesStr+' | 前回 '+lastDate+': <strong style="color:var(--hot)">'+lastNumsStr+'</strong></div>'
+    +legend+setsHTML
+    +'<div id="saved-sets-wrap">'+renderSavedSets()+'</div>'
+    +'</div>';
 }
 
 // --------------------------------------------------------
@@ -1541,21 +1532,27 @@ function deleteSavedSet(idx){
 function renderSavedSets(flash=false){
   const saved=loadSavedSets();
   if(saved.length===0)return`<div class="card"><div class="card-title">保存したセット (0件)</div></div>`;
-  return`<div class="card">
-    <div class="card-title">保存したセット (${saved.length}件)</div>
-    ${saved.map((s,i)=>{
-      const rk=scoreToRank(s.score||0);
-      return`<div class="saved-set-item" style="${flash&&i===0?'border-color:var(--accent);':''}">
-        <div style="flex-shrink:0;">
-          <div class="saved-set-date">${s.date}</div>
-          <div style="font-size:9px;color:var(--text-dim);margin-top:2px;">${s.strategy||''}</div>
-          <div style="font-size:9px;font-family:Orbitron,monospace;font-weight:900;color:${rk.color};">${rk.rank}</div>
-        </div>
-        <div class="saved-set-balls">${s.nums.map((n,ni)=>{const st=getMiniStyle(n,s.nums,s.axes||[],s.lastNums||[]);return`<div class="mini-ball" style="background:${st.bg};${st.color?'color:'+st.color+';':''}box-shadow:${st.shadow};">${n}</div>`;}).join('')}</div>
-        <button onclick="deleteSavedSet(${i})" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:14px;flex-shrink:0;padding:4px;">✕</button>
-      </div>`;
-    }).join('')}
-  </div>`;
+  var sh='<div class="card"><div class="card-title">保存したセット ('+saved.length+'件)</div>';
+  saved.forEach(function(s,i){
+    const rk=scoreToRank(s.score||0);
+    const border=flash&&i===0?'border-color:var(--accent);':'';
+    sh+='<div class="saved-set-item" style="'+border+'">';
+    sh+='<div style="flex-shrink:0;">';
+    sh+='<div class="saved-set-date">'+s.date+'</div>';
+    sh+='<div style="font-size:9px;color:var(--text-dim);margin-top:2px;">'+(s.strategy||'')+'</div>';
+    sh+='<div style="font-size:9px;font-family:Orbitron,monospace;font-weight:900;color:'+rk.color+';">'+rk.rank+'</div>';
+    sh+='</div><div class="saved-set-balls">';
+    s.nums.forEach(function(n){
+      const st=getMiniStyle(n,s.nums,s.axes||[],s.lastNums||[]);
+      const clr=st.color?'color:'+st.color+';':'';
+      sh+='<div class="mini-ball" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';">'+n+'</div>';
+    });
+    sh+='</div>';
+    sh+='<button onclick="deleteSavedSet('+i+')" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:14px;flex-shrink:0;padding:4px;">x</button>';
+    sh+='</div>';
+  });
+  sh+='</div>';
+  return sh;
 }
 
 // --------------------------------------------------------
@@ -1692,18 +1689,25 @@ function renderZonePatterns(){
   const el=document.getElementById('zone-pattern-list');
   if(!el){console.error('[renderZonePatterns] zone-pattern-list not found');return;}
   const zoneColors=['#ff6b35','#00e5ff','#7c3aed','#fbdf24'];
-  el.innerHTML=part.map(([p,c])=>{
-    const parts=p.split('-').map(Number);
-    const pct=Math.round(c/total*100);
-    return`<div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px;">
-      <div style="display:flex;gap:4px;align-items:center;">${parts.map((v,i)=>`<span style="font-family:Orbitron,monospace;font-size:13px;border:1px solid ${zoneColors[i]};border-radius:4px;padding:1px 5px;color:${zoneColors[i]};">${v}</span>`).join('<span style="font-size:10px;color:var(--text-dim);">/</span>')}</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <div style="width:80px;height:8px;background:var(--surface1);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${Math.round(c/part[0][1]*100)}%;background:linear-gradient(90deg,var(--accent),#4c1d95);border-radius:4px;"></div></div>
-        <span style="font-size:11px;color:var(--accent2);">${c}回</span>
-        <span style="font-size:9px;color:var(--text-dim);">${pct}%</span>
-      </div>
-    </div>`;
-  }).join('');
+  var zhtml='';
+  part.forEach(function(item){
+    var p=item[0],c=item[1];
+    var pts=p.split('-').map(Number);
+    var pct=Math.round(c/total*100);
+    var row='<div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px;">';
+    row+='<div style="display:flex;gap:4px;align-items:center;">';
+    pts.forEach(function(v,i){
+      if(i>0)row+='<span style="font-size:10px;color:var(--text-dim);">/</span>';
+      row+='<span style="font-family:Orbitron,monospace;font-size:13px;border:1px solid '+zoneColors[i]+';border-radius:4px;padding:1px 5px;color:'+zoneColors[i]+';">'+v+'</span>';
+    });
+    row+='</div><div style="display:flex;gap:8px;align-items:center;">';
+    row+='<div style="width:80px;height:8px;background:var(--surface1);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+Math.round(c/part[0][1]*100)+'%;background:linear-gradient(90deg,var(--accent),#4c1d95);border-radius:4px;"></div></div>';
+    row+='<span style="font-size:11px;color:var(--accent2);">'+c+'回</span>';
+    row+='<span style="font-size:9px;color:var(--text-dim);">'+pct+'%</span>';
+    row+='</div></div>';
+    zhtml+=row;
+  });
+  el.innerHTML=zhtml;
   }catch(e){console.error('[renderZonePatterns] ERROR:',e.message,e.stack);}
 }
 
@@ -1733,35 +1737,33 @@ function renderConsAnalysis(){
   // 直近20回の連続発生率
   const recentHit=recent.filter(d=>getConsecutiveGroups(d.nums).length>0).length;
 
-  // ヘッダーサマリー
-  let html=`
-    <div style="background:var(--surface1);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-        <div>
-          <span style="font-size:10px;font-family:'Orbitron',monospace;color:var(--accent);letter-spacing:1px;">全期間</span>
-          <span style="font-size:13px;font-family:'Orbitron',monospace;color:var(--gold);margin:0 4px;">${histData.length}</span>
-          <span style="font-size:10px;color:var(--text-dim);">/ ${allData.length}回 (${Math.round(histData.length/allData.length*100)}%)</span>
-        </div>
-        <div>
-          <span style="font-size:10px;color:var(--text-dim);">直近20回: </span>
-          <span style="font-size:12px;font-family:'Orbitron',monospace;color:${recentHit>=12?'var(--hot)':recentHit>=8?'var(--accent2)':'var(--cold)'};">${recentHit}回</span>
-          <span style="font-size:9px;color:var(--text-dim);"> (${Math.round(recentHit/20*100)}%)</span>
-        </div>
-      </div>
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;">帯域別 連続数発生割合（全期間）</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${Object.entries(zoneCounts).map(([label,cnt])=>{
-          const pct=Math.round(cnt/zoneTotal*100);
-          const col=zoneColors[label];
-          return`<div style="flex:1;min-width:60px;background:${col}18;border:1px solid ${col}55;border-radius:6px;padding:6px 8px;text-align:center;">
-            <div style="font-size:9px;color:${col};letter-spacing:1px;margin-bottom:3px;">${label}</div>
-            <div style="font-family:'Orbitron',monospace;font-size:14px;color:${col};font-weight:700;">${pct}<span style="font-size:9px;">%</span></div>
-            <div style="font-size:8px;color:var(--text-dim);">${cnt}件</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;padding:0 2px;">▼ 直近20回の連続数発生履歴</div>`;
+  // ヘッダーサマリー（文字列結合方式）
+  var hitColor=recentHit>=12?'var(--hot)':recentHit>=8?'var(--accent2)':'var(--cold)';
+  var html='<div style="background:var(--surface1);border-radius:8px;padding:10px 12px;margin-bottom:10px;">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">';
+  html+='<div>';
+  html+='<span style="font-size:10px;font-family:Orbitron,monospace;color:var(--accent);letter-spacing:1px;">全期間</span>';
+  html+='<span style="font-size:13px;font-family:Orbitron,monospace;color:var(--gold);margin:0 4px;">'+histData.length+'</span>';
+  html+='<span style="font-size:10px;color:var(--text-dim);">/ '+allData.length+'回 ('+Math.round(histData.length/allData.length*100)+'%)</span>';
+  html+='</div><div>';
+  html+='<span style="font-size:10px;color:var(--text-dim);">直近20回: </span>';
+  html+='<span style="font-size:12px;font-family:Orbitron,monospace;color:'+hitColor+';">'+recentHit+'回</span>';
+  html+='<span style="font-size:9px;color:var(--text-dim);"> ('+Math.round(recentHit/20*100)+'%)</span>';
+  html+='</div></div>';
+  html+='<div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;">帯域別 連続数発生割合（全期間）</div>';
+  html+='<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+  Object.entries(zoneCounts).forEach(function(entry){
+    var label=entry[0], cnt=entry[1];
+    var pct=Math.round(cnt/zoneTotal*100);
+    var col=zoneColors[label];
+    html+='<div style="flex:1;min-width:60px;background:'+col+'18;border:1px solid '+col+'55;border-radius:6px;padding:6px 8px;text-align:center;">';
+    html+='<div style="font-size:9px;color:'+col+';letter-spacing:1px;margin-bottom:3px;">'+label+'</div>';
+    html+='<div style="font-family:Orbitron,monospace;font-size:14px;color:'+col+';font-weight:700;">'+pct+'<span style="font-size:9px;">%</span></div>';
+    html+='<div style="font-size:8px;color:var(--text-dim);">'+cnt+'件</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+  html+='<div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px;padding:0 2px;">▼ 直近20回の連続数発生履歴</div>';
 
   // 直近20回をすべて表示（発生なしも含む）
   recent.forEach((d,i)=>{
@@ -1829,15 +1831,18 @@ function toggleAxis(n){
 function renderDataPreview(){
   document.getElementById('loaded-data-info').innerHTML=`<div class="info-banner">📊 取込済 <strong>${allData.length}件</strong> (ベース${BASE_DATA.length} + 追加${extraData.length})</div>`;
   const rows=[...allData].reverse().slice(0,50);
-  document.getElementById('data-preview-tbody').innerHTML=rows.map(d=>`
-    <tr>
-      <td style="font-size:9px;">${d.date}${extraData.some(e=>e.date===d.date)?` <span class="tag-new">new</span>`:''}</td>
-      ${[...d.nums].sort((a,b)=>a-b).map(n=>`<td style="font-size:9px;">${n}</td>`).join('')}
-      <td style="font-size:9px;">${d.bonus[0]}</td>
-      <td style="font-size:9px;">${d.bonus[1]}</td>
-      <td><button onclick="deleteEntry('${d.date}')" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:12px;">✕</button></td>
-    </tr>
-  `).join('');
+  document.getElementById('data-preview-tbody').innerHTML=rows.map(d=>{
+    const isNew=extraData.some(e=>e.date===d.date);
+    const newTag=isNew?' <span class="tag-new">new</span>':'';
+    const numCells=[...d.nums].sort((a,b)=>a-b).map(n=>'<td style="font-size:9px;">'+n+'</td>').join('');
+    return '<tr>'
+      +'<td style="font-size:9px;">'+d.date+newTag+'</td>'
+      +numCells
+      +'<td style="font-size:9px;">'+d.bonus[0]+'</td>'
+      +'<td style="font-size:9px;">'+d.bonus[1]+'</td>'
+      +'<td><button onclick="deleteEntry(\''+d.date+'\')" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:12px;">x</button></td>'
+      +'</tr>';
+  }).join('');
 }
 
 function switchTab(tab,btn){
