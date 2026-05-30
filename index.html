@@ -491,6 +491,7 @@ const BASE_DATA=[
 const STORAGE_KEY='loto7_extra_v2';
 const SAVED_KEY='loto7_saved_sets_v1';
 const ROUNDS_KEY='loto7_rounds_v1';
+const STATS_KEY='loto7_srank_stats_v1';
 let extraData=[],allData=[],originalSets=new Map();
 let editSets=[],currentAxes=[],currentLastNums=[];
 let allRounds=[];   // [{sets:[...], axes:[...], lastNums:[...], roundNum:N}]
@@ -548,6 +549,47 @@ function enterPrizeAmount(idx){
   saveSavedSets(saved);
   const wrap=document.getElementById('saved-sets-wrap');
   if(wrap)wrap.innerHTML=renderSavedSets();
+}
+
+// ===== Sランク集計 =====
+function loadSrankStats(){
+  try{return JSON.parse(localStorage.getItem(STATS_KEY)||'[]');}
+  catch(e){return[];}
+}
+function saveSrankStats(arr){localStorage.setItem(STATS_KEY,JSON.stringify(arr));}
+
+// セット保存時にSランク数字を記録
+function calcSrankNums(nums){
+  const fa=getFrequency(allData,10),fr=getFrequency(allData),cd=getCycleData(allData);
+  buildRankThresholds();
+  return nums.filter(n=>scoreToRank(scoreNumberWeighted(n,fa,fr,cd)).rank==='S');
+}
+
+// 当選番号更新時にSランク照合を記録
+function recordSrankResult(savedSet, winNums, winDate){
+  if(!savedSet.srankNums||savedSet.srankNums.length===0)return;
+  const stats=loadSrankStats();
+  const hitCount=savedSet.srankNums.filter(n=>winNums.includes(n)).length;
+  stats.push({
+    date:winDate,
+    srankTotal:savedSet.srankNums.length,
+    srankHit:hitCount,
+    setDate:savedSet.date,
+  });
+  saveSrankStats(stats);
+}
+
+// Sランク統計を集計
+function calcSrankSummary(){
+  const stats=loadSrankStats();
+  if(stats.length===0)return null;
+  const total=stats.length;
+  const byCount={};
+  stats.forEach(s=>{
+    const k=s.srankHit;
+    byCount[k]=(byCount[k]||0)+1;
+  });
+  return{total,byCount};
 }
 
 // ===== 連続数設定 =====
@@ -849,6 +891,15 @@ function addNewResult(){
   if(allData.some(d=>d.date===date)){el.innerHTML='<div class="warn-banner">この日付のデータは既に登録されています</div>';return;}
   extraData.push({date,nums:nums.sort((a,b)=>a-b),bonus:[b1,b2]});
   saveToStorage();mergeData();renderAll();
+  // 当選番号追加時にSランク照合を記録
+  const newWin=allData[allData.length-1];
+  if(newWin){
+    const saved=loadSavedSets();
+    saved.forEach(s=>{if(s.srankNums&&s.srankNums.length>0)recordSrankResult(s,newWin.nums,newWin.date);});
+    // 統計パネルを更新
+    const sp=document.getElementById('srank-stats-panel');
+    if(sp)sp.innerHTML=renderSrankStats();
+  }
   el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！</div>';
   ["inp-date","n1","n2","n3","n4","n5","n6","n7","b1","b2"].forEach(id=>document.getElementById(id).value="");
   setTimeout(()=>el.innerHTML="",3000);
@@ -1473,6 +1524,7 @@ function saveOneSet(roundIdx,setIdx){
     date:new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}),
     nums:[...s.nums],score:s.score,strategy:`R${roundIdx+1}-${setIdx+1} ${s.strategy}`,
     axes:[...rnd.axes],lastNums:[...rnd.lastNums],
+    srankNums:calcSrankNums(s.nums),
   });
   if(saved.length>50)saved.pop();
   saveSavedSets(saved);
@@ -1488,6 +1540,7 @@ function saveRound(roundIdx){
       date:new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}),
       nums:[...s.nums],score:s.score,strategy:`R${roundIdx+1}-${si+1} ${s.strategy}`,
       axes:[...rnd.axes],lastNums:[...rnd.lastNums],
+      srankNums:calcSrankNums(s.nums),
     });
   });
   if(saved.length>50)saved.splice(50);
@@ -1504,6 +1557,7 @@ function bulkSaveAll(){
         date:new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}),
         nums:[...s.nums],score:s.score,strategy:`R${ri+1}-${si+1} ${s.strategy}`,
         axes:[...rnd.axes],lastNums:[...rnd.lastNums],
+        srankNums:calcSrankNums(s.nums),
       });
     });
   });
@@ -1577,6 +1631,45 @@ function deleteSavedSet(idx){
   if(wrap)wrap.innerHTML=renderSavedSets();
 }
 
+function clearSrankStats(){
+  if(!confirm('Sランク集計データをリセットしますか？'))return;
+  localStorage.removeItem(STATS_KEY);
+  const wrap=document.getElementById('saved-sets-wrap');
+  if(wrap)wrap.innerHTML=renderSavedSets();
+}
+
+function renderSrankStats(){
+  const summary=calcSrankSummary();
+  if(!summary||summary.total===0){
+    return'<div style="font-size:10px;color:var(--text-dim);text-align:center;padding:8px;">まだデータがありません。当選番号を追加すると集計が始まります。</div>';
+  }
+  const{total,byCount}=summary;
+  var h='';
+  h+='<div style="font-size:9px;color:var(--text-dim);margin-bottom:8px;">全'+total+'セット分の照合結果</div>';
+  h+='<div style="display:flex;flex-direction:column;gap:6px;">';
+  [0,1,2,3,4,5,6,7].forEach(function(k){
+    const cnt=byCount[k]||0;
+    if(cnt===0&&k>4)return;
+    const pct=Math.round(cnt/total*100);
+    const barW=Math.round(cnt/total*100);
+    const col=k===0?'var(--text-dim)':k===1?'var(--cold)':k===2?'var(--accent2)':k>=3?'var(--hot)':'var(--accent)';
+    h+='<div style="display:flex;align-items:center;gap:8px;">';
+    h+='<div style="font-size:10px;color:'+col+';width:32px;flex-shrink:0;font-family:Orbitron,monospace;">S×'+k+'</div>';
+    h+='<div style="flex:1;height:12px;background:var(--surface1);border-radius:4px;overflow:hidden;">';
+    h+='<div style="height:100%;width:'+barW+'%;background:'+col+';border-radius:4px;transition:width 0.3s;"></div>';
+    h+='</div>';
+    h+='<div style="font-size:10px;color:'+col+';width:50px;text-align:right;">'+cnt+'回 '+pct+'%</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<div style="margin-top:8px;font-size:9px;color:var(--text-dim);">';
+  // 最も多いパターン
+  const maxK=Object.entries(byCount).sort((a,b)=>b[1]-a[1])[0];
+  if(maxK)h+='最多: <span style="color:var(--accent2);">S×'+maxK[0]+'個</span>が最もよく含まれています';
+  h+='</div>';
+  return h;
+}
+
 function renderSavedSets(flash=false){
   const saved=loadSavedSets();
   if(saved.length===0)return'<div class="card"><div class="card-title">保存したセット (0件)</div></div>';
@@ -1586,6 +1679,12 @@ function renderSavedSets(flash=false){
 
   var sh='<div class="card">';
   sh+='<div class="card-title">保存したセット ('+saved.length+'件)</div>';
+  // Sランク統計パネル
+  sh+='<div id="srank-stats-panel" style="background:var(--surface1);border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid rgba(251,191,36,0.2);">';
+  sh+='<div style="font-size:10px;color:var(--accent2);letter-spacing:2px;margin-bottom:6px;">S ランク含有数 集計</div>';
+  sh+=renderSrankStats();
+  sh+='<button onclick="clearSrankStats()" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:3px 10px;font-size:9px;cursor:pointer;margin-top:6px;">リセット</button>';
+  sh+='</div>';
   if(winData){
     sh+='<div style="font-size:9px;color:var(--text-dim);text-align:center;margin-bottom:8px;padding:4px 8px;background:var(--surface1);border-radius:6px;">';
     sh+='照合: <span style="color:var(--accent2);">'+winData.date+'</span> 当選 ';
@@ -1597,6 +1696,9 @@ function renderSavedSets(flash=false){
   saved.forEach(function(s,i){
     const rk=scoreToRank(s.score||0);
     const border=flash&&i===0?'border-color:var(--accent);':'';
+
+    // Sランク数字
+    var srankNums=s.srankNums||[];
 
     // 当選照合
     var prize=null;
@@ -1632,14 +1734,16 @@ function renderSavedSets(flash=false){
       // 当選番号と一致する場合は緑ボール
       var isHit=winData&&winData.nums.includes(n);
       var isBonus=winData&&winData.bonus.includes(n)&&!isHit;
+      var isSrank=srankNums.includes(n);
       if(isHit){
-        sh+='<div class="mini-ball hit">'+n+'</div>';
+        sh+='<div class="mini-ball hit" title="当選一致'+(isSrank?' / Sランク':'')+'">'+n+(isSrank?'<span style="position:absolute;top:-3px;right:-3px;width:6px;height:6px;background:#fbdf24;border-radius:50%;"></span>':'')+'</div>';
       } else if(isBonus){
         sh+='<div class="mini-ball bonus-hit">'+n+'</div>';
       } else {
         const st=getMiniStyle(n,s.nums,s.axes||[],s.lastNums||[]);
         const clr=st.color?'color:'+st.color+';':'';
-        sh+='<div class="mini-ball" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';">'+n+'</div>';
+        var smarkStyle=isSrank?'outline:1px solid var(--gold);':'';
+        sh+='<div class="mini-ball" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';'+smarkStyle+'" title="'+(isSrank?'Sランク':'')+'">'+n+'</div>';
       }
     });
     sh+='</div>';
