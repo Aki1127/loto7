@@ -116,7 +116,7 @@
     .saved-set-balls{display:flex;gap:4px;flex-wrap:wrap;flex:1;}
     .mini-ball{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:7px;font-weight:700;flex-shrink:0;}
     .mini-ball.hit{background:radial-gradient(circle at 35% 30%,#00ff88,#008844)!important;color:#000!important;box-shadow:0 0 10px rgba(0,255,136,0.7)!important;}
-    .mini-ball.bonus-hit{background:radial-gradient(circle at 35% 30%,#88ffcc,#004422)!important;color:#000!important;box-shadow:0 0 8px rgba(0,255,136,0.5)!important;}
+    .mini-ball.bonus-hit{background:radial-gradient(circle at 35% 30%,#88eeff,#0088bb)!important;color:#000!important;box-shadow:0 0 8px rgba(0,229,255,0.6)!important;}
     .prize-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;font-family:'Orbitron',monospace;margin-top:4px;}
     .prize-1{background:rgba(251,191,36,0.2);border:1px solid #fbdf24;color:#fbdf24;}
     .prize-2{background:rgba(200,160,255,0.2);border:1px solid #c8a0ff;color:#c8a0ff;}
@@ -327,8 +327,8 @@
       </div>
 
       <!-- 連続数設定 -->
-      <div style="background:var(--surface1);border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid rgba(255,107,53,0.25);">
-        <div style="font-size:10px;color:#ff6b35;letter-spacing:2px;margin-bottom:8px;">連続数 設定</div>
+      <div style="background:var(--surface1);border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid rgba(160,180,200,0.2);">
+        <div style="font-size:10px;color:#8aa0b8;letter-spacing:2px;margin-bottom:8px;">連続数 設定</div>
 
         <div class="weight-row" style="margin-bottom:10px;">
           <div class="weight-label">連続数セット数<span id="cons-sets-label">0セット / 8セット中</span></div>
@@ -704,7 +704,7 @@ function updateConsStatus(){
     if(recentHit>=7)reverseMsg=' → <span style="color:var(--hot)">多発中▼2セット抑制</span>';
     else if(recentHit<=3)reverseMsg=' → <span style="color:var(--cold)">少ない▲2セット増加</span>';
   }
-  el.innerHTML=`直近10回の連続数発生: <span style="color:${hitRate>=60?'var(--hot)':hitRate>=40?'var(--accent2)':'var(--cold)'}">${recentHit}/10回 (${hitRate}%)</span>${reverseMsg}`;
+  el.innerHTML='直近10回の連続数発生: <span style="color:'+(hitRate>=60?'var(--hot)':hitRate>=40?'var(--accent2)':'var(--cold)')+'">'+(recentHit)+'/10回 ('+hitRate+'%)</span>'+reverseMsg;
 }
 
 // ===== 重み付け設定 =====
@@ -1685,10 +1685,15 @@ function renderSavedSets(flash=false){
   sh+='<button onclick="clearSrankStats()" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:3px 10px;font-size:9px;cursor:pointer;margin-top:6px;">リセット</button>';
   sh+='</div>';
   if(winData){
-    sh+='<div style="font-size:9px;color:var(--text-dim);text-align:center;margin-bottom:8px;padding:4px 8px;background:var(--surface1);border-radius:6px;">';
+    sh+='<div style="font-size:9px;color:var(--text-dim);text-align:center;margin-bottom:8px;padding:6px 8px;background:var(--surface1);border-radius:6px;">';
     sh+='照合: <span style="color:var(--accent2);">'+winData.date+'</span> 当選 ';
     sh+=winData.nums.map(n=>'<span style="color:var(--gold);font-family:Orbitron,monospace;">'+n+'</span>').join(' ');
     sh+=' B:'+winData.bonus.map(n=>'<span style="color:#88ffcc;font-family:Orbitron,monospace;">'+n+'</span>').join(' ');
+    sh+='<div style="display:flex;gap:10px;justify-content:center;margin-top:4px;">';
+    sh+='<span style="font-size:9px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#00ff88;margin-right:3px;"></span>本数字一致</span>';
+    sh+='<span style="font-size:9px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffcc44;margin-right:3px;"></span>ボーナス一致</span>';
+    sh+='<span style="font-size:9px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1a2535;border:1px solid #2d4060;margin-right:3px;"></span>外れ</span>';
+    sh+='</div>';
     sh+='</div>';
   }
 
@@ -1739,8 +1744,8 @@ function renderSavedSets(flash=false){
       } else if(isBonus){
         sh+='<div class="mini-ball bonus-hit">'+n+'</div>';
       } else {
-        var smk=isSrank?'outline:2px solid #fbdf24;':'';
-        sh+='<div class="mini-ball" style="background:#1e2d42;color:#a0b4cc;box-shadow:none;'+smk+'">'+n+'</div>';
+        var smk=isSrank?'outline:2px solid #fbdf24;border:none;':'';
+        sh+='<div class="mini-ball" style="background:#1a2535;color:#8aa0b8;border:1px solid #2d4060;box-shadow:none;'+smk+'">'+n+'</div>';
       }
     });
     sh+='</div>';
