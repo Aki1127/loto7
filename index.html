@@ -124,7 +124,6 @@
     .prize-4{background:rgba(0,229,255,0.15);border:1px solid #00e5ff;color:#00e5ff;}
     .prize-5{background:rgba(128,181,255,0.15);border:1px solid #80b5ff;color:#80b5ff;}
     .prize-6{background:rgba(100,200,100,0.15);border:1px solid #64c864;color:#64c864;}
-    .prize-7{background:rgba(107,140,170,0.15);border:1px solid #6b8caa;color:#6b8caa;}
     .prize-input{background:var(--surface2);border:1px solid var(--border);color:var(--accent2);border-radius:5px;padding:2px 6px;font-size:10px;font-family:'Orbitron',monospace;width:90px;text-align:right;}
 
     /* ===== 重み付けパネル ===== */
@@ -529,8 +528,8 @@ function checkPrize(nums, winNums, bonusNums){
   if(hits===5&&bonusHits>=1)return{grade:4,label:'4等',cls:'prize-4',amount:9100,auto:true};
   if(hits===5)return{grade:4,label:'4等',cls:'prize-4',amount:9100,auto:true};
   if(hits===4)return{grade:5,label:'5等',cls:'prize-5',amount:1400,auto:true};
-  if(hits===3&&bonusHits>=1)return{grade:6,label:'6等',cls:'prize-6',amount:1000,auto:true};
-  if(hits===3)return{grade:7,label:'7等',cls:'prize-7',amount:800,auto:true};
+  if(hits===3&&bonusHits>=1)return{grade:6,label:'6等',cls:'prize-6',amount:1000,auto:true}; // 本数刖3個+ボーナス1個
+  // ロト7は6等まで（本数刖3個一致は等外）
   return null;
 }
 
@@ -1736,14 +1735,12 @@ function renderSavedSets(flash=false){
       var isBonus=winData&&winData.bonus.includes(n)&&!isHit;
       var isSrank=srankNums.includes(n);
       if(isHit){
-        sh+='<div class="mini-ball hit" title="当選一致'+(isSrank?' / Sランク':'')+'">'+n+(isSrank?'<span style="position:absolute;top:-3px;right:-3px;width:6px;height:6px;background:#fbdf24;border-radius:50%;"></span>':'')+'</div>';
+        sh+='<div class="mini-ball hit">'+n+'</div>';
       } else if(isBonus){
         sh+='<div class="mini-ball bonus-hit">'+n+'</div>';
       } else {
-        const st=getMiniStyle(n,s.nums,s.axes||[],s.lastNums||[]);
-        const clr=st.color?'color:'+st.color+';':'';
-        var smarkStyle=isSrank?'outline:1px solid var(--gold);':'';
-        sh+='<div class="mini-ball" style="background:'+st.bg+';'+clr+'box-shadow:'+st.shadow+';'+smarkStyle+'" title="'+(isSrank?'Sランク':'')+'">'+n+'</div>';
+        var smk=isSrank?'outline:2px solid #fbdf24;':'';
+        sh+='<div class="mini-ball" style="background:#1e2d42;color:#a0b4cc;box-shadow:none;'+smk+'">'+n+'</div>';
       }
     });
     sh+='</div>';
