@@ -1704,15 +1704,23 @@ function renderSavedSets(flash=false){
     // Sランク数字
     var srankNums=s.srankNums||[];
 
-    // 当選照合
+    // 当選照合：当選番号の日付より後に保存されたセットのみ照合
     var prize=null;
-    if(winData){
+    var shouldCheck=false;
+    if(winData&&s.date){
+      // 保存日付と当選日付を比較
+      var savedDate=new Date(s.date.replace(/\//g,'-'));
+      var winDate=new Date(winData.date.replace(/\//g,'-'));
+      // 保存日が当選日以降のセットのみ照合（今週買ったものだけ）
+      shouldCheck=savedDate>=winDate;
+    }
+    if(shouldCheck){
       prize=checkPrize(s.nums, winData.nums, winData.bonus);
     }
 
     // 当選した場合は枠を緑色に
     var itemStyle=border;
-    if(prize)itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
+    if(prize&&shouldCheck)itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
 
     sh+='<div class="saved-set-item" style="'+itemStyle+'">';
     sh+='<div style="flex-shrink:0;">';
@@ -1736,8 +1744,8 @@ function renderSavedSets(flash=false){
     sh+='</div><div class="saved-set-balls">';
     s.nums.forEach(function(n){
       // 当選番号と一致する場合は緑ボール
-      var isHit=winData&&winData.nums.includes(n);
-      var isBonus=winData&&winData.bonus.includes(n)&&!isHit;
+      var isHit=shouldCheck&&winData&&winData.nums.includes(n);
+      var isBonus=shouldCheck&&winData&&winData.bonus.includes(n)&&!isHit;
       var isSrank=srankNums.includes(n);
       if(isHit){
         sh+='<div class="mini-ball hit">'+n+'</div>';
@@ -1751,7 +1759,7 @@ function renderSavedSets(flash=false){
     sh+='</div>';
 
     // 一致数表示
-    if(winData){
+    if(shouldCheck&&winData){
       const hitCount=s.nums.filter(n=>winData.nums.includes(n)).length;
       const bonusCount=s.nums.filter(n=>winData.bonus.includes(n)).length;
       sh+='<div style="font-size:8px;color:var(--text-dim);text-align:center;margin-top:2px;">';
