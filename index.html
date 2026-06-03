@@ -890,11 +890,25 @@ function addNewResult(){
   if(allData.some(d=>d.date===date)){el.innerHTML='<div class="warn-banner">この日付のデータは既に登録されています</div>';return;}
   extraData.push({date,nums:nums.sort((a,b)=>a-b),bonus:[b1,b2]});
   saveToStorage();mergeData();renderAll();
-  // 当選番号追加時にSランク照合を記録
+  // 当選番号追加時にSランク照合を記録＆照合済みフラグを付ける
   const newWin=allData[allData.length-1];
   if(newWin){
     const saved=loadSavedSets();
-    saved.forEach(s=>{if(s.srankNums&&s.srankNums.length>0)recordSrankResult(s,newWin.nums,newWin.date);});
+    let updated=false;
+    saved.forEach(s=>{
+      if(s.srankNums&&s.srankNums.length>0)recordSrankResult(s,newWin.nums,newWin.date);
+      // 照合対象セットに照合済みフラグを付ける
+      if(!s.checked&&s.date){
+        const savedDate=new Date(s.date.replace(/\//g,'-'));
+        const winDate=new Date(newWin.date.replace(/\//g,'-'));
+        if(savedDate>=winDate){
+          s.checked=true;
+          s.checkedDate=newWin.date;
+          updated=true;
+        }
+      }
+    });
+    if(updated)saveSavedSets(saved);
     // 統計パネルを更新
     const sp=document.getElementById('srank-stats-panel');
     if(sp)sp.innerHTML=renderSrankStats();
@@ -1704,29 +1718,37 @@ function renderSavedSets(flash=false){
     // Sランク数字
     var srankNums=s.srankNums||[];
 
-    // 当選照合：当選番号の日付より後に保存されたセットのみ照合
+    // 当選照合：照合済みでない かつ 保存日≥当選日のセットのみ
     var prize=null;
     var shouldCheck=false;
-    if(winData&&s.date){
-      // 保存日付と当選日付を比較
+    if(winData&&s.date&&!s.checked){
       var savedDate=new Date(s.date.replace(/\//g,'-'));
       var winDate=new Date(winData.date.replace(/\//g,'-'));
-      // 保存日が当選日以降のセットのみ照合（今週買ったものだけ）
       shouldCheck=savedDate>=winDate;
+    }
+    // 照合済みセットは保存済みの結果を表示
+    var checkedWinData=null;
+    if(s.checked&&s.checkedDate){
+      checkedWinData=allData.find(function(d){return d.date===s.checkedDate;})||null;
     }
     if(shouldCheck){
       prize=checkPrize(s.nums, winData.nums, winData.bonus);
+    } else if(checkedWinData){
+      prize=checkPrize(s.nums, checkedWinData.nums, checkedWinData.bonus);
     }
 
     // 当選した場合は枠を緑色に
     var itemStyle=border;
-    if(prize&&shouldCheck)itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
+    if(prize&&(shouldCheck||s.checked))itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
 
     sh+='<div class="saved-set-item" style="'+itemStyle+'">';
     sh+='<div style="flex-shrink:0;">';
     sh+='<div class="saved-set-date">'+s.date+'</div>';
     sh+='<div style="font-size:9px;color:var(--text-dim);margin-top:2px;">'+(s.strategy||'')+'</div>';
     sh+='<div style="font-size:9px;font-family:Orbitron,monospace;font-weight:900;color:'+rk.color+';">'+rk.rank+'</div>';
+    if(s.checked){
+      sh+='<div style="font-size:8px;color:#4a6fa5;margin-top:2px;">照合済 '+s.checkedDate+'</div>';
+    }
 
     // 等級・金額表示
     if(prize){
@@ -1744,8 +1766,9 @@ function renderSavedSets(flash=false){
     sh+='</div><div class="saved-set-balls">';
     s.nums.forEach(function(n){
       // 当選番号と一致する場合は緑ボール
-      var isHit=shouldCheck&&winData&&winData.nums.includes(n);
-      var isBonus=shouldCheck&&winData&&winData.bonus.includes(n)&&!isHit;
+      var activeWin=shouldCheck?winData:(s.checked&&checkedWinData?checkedWinData:null);
+      var isHit=activeWin&&activeWin.nums.includes(n);
+      var isBonus=activeWin&&activeWin.bonus.includes(n)&&!isHit;
       var isSrank=srankNums.includes(n);
       if(isHit){
         sh+='<div class="mini-ball hit">'+n+'</div>';
@@ -1759,9 +1782,10 @@ function renderSavedSets(flash=false){
     sh+='</div>';
 
     // 一致数表示
-    if(shouldCheck&&winData){
-      const hitCount=s.nums.filter(n=>winData.nums.includes(n)).length;
-      const bonusCount=s.nums.filter(n=>winData.bonus.includes(n)).length;
+    var countWin=shouldCheck?winData:(s.checked&&checkedWinData?checkedWinData:null);
+    if(countWin){
+      const hitCount=s.nums.filter(n=>countWin.nums.includes(n)).length;
+      const bonusCount=s.nums.filter(n=>countWin.bonus.includes(n)).length;
       sh+='<div style="font-size:8px;color:var(--text-dim);text-align:center;margin-top:2px;">';
       sh+=hitCount>0?'<span style="color:#00ff88;">'+hitCount+'個一致</span>':'0個一致';
       if(bonusCount>0)sh+=' <span style="color:#88ffcc;">B'+bonusCount+'</span>';
