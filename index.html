@@ -1698,6 +1698,7 @@ function renderSavedSets(flash=false){
   sh+=renderSrankStats();
   sh+='<button onclick="clearSrankStats()" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:3px 10px;font-size:9px;cursor:pointer;margin-top:6px;">リセット</button>';
   sh+='</div>';
+  const hasUnchecked=saved.some(function(s){return !s.checked;});
   if(winData){
     sh+='<div style="font-size:9px;color:var(--text-dim);text-align:center;margin-bottom:8px;padding:6px 8px;background:var(--surface1);border-radius:6px;">';
     sh+='照合: <span style="color:var(--accent2);">'+winData.date+'</span> 当選 ';
@@ -1718,28 +1719,22 @@ function renderSavedSets(flash=false){
     // Sランク数字
     var srankNums=s.srankNums||[];
 
-    // 当選照合：照合済みでない かつ 保存日≥当選日のセットのみ
+    // 当選照合：照合済みセットのみ過去結果を表示
+    // 未照合セットは当選番号入力時のみ照合される（リアルタイム照合なし）
     var prize=null;
     var shouldCheck=false;
-    if(winData&&s.date&&!s.checked){
-      var savedDate=new Date(s.date.replace(/\//g,'-'));
-      var winDate=new Date(winData.date.replace(/\//g,'-'));
-      shouldCheck=savedDate>=winDate;
-    }
-    // 照合済みセットは保存済みの結果を表示
     var checkedWinData=null;
     if(s.checked&&s.checkedDate){
+      // 照合済み：保存された結果を表示
       checkedWinData=allData.find(function(d){return d.date===s.checkedDate;})||null;
-    }
-    if(shouldCheck){
-      prize=checkPrize(s.nums, winData.nums, winData.bonus);
-    } else if(checkedWinData){
-      prize=checkPrize(s.nums, checkedWinData.nums, checkedWinData.bonus);
+      if(checkedWinData){
+        prize=checkPrize(s.nums, checkedWinData.nums, checkedWinData.bonus);
+      }
     }
 
     // 当選した場合は枠を緑色に
     var itemStyle=border;
-    if(prize&&(shouldCheck||s.checked))itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
+    if(prize&&s.checked)itemStyle+='border-color:#00ff88;background:rgba(0,255,136,0.05);';
 
     sh+='<div class="saved-set-item" style="'+itemStyle+'">';
     sh+='<div style="flex-shrink:0;">';
@@ -1766,7 +1761,7 @@ function renderSavedSets(flash=false){
     sh+='</div><div class="saved-set-balls">';
     s.nums.forEach(function(n){
       // 当選番号と一致する場合は緑ボール
-      var activeWin=shouldCheck?winData:(s.checked&&checkedWinData?checkedWinData:null);
+      var activeWin=s.checked&&checkedWinData?checkedWinData:null;
       var isHit=activeWin&&activeWin.nums.includes(n);
       var isBonus=activeWin&&activeWin.bonus.includes(n)&&!isHit;
       var isSrank=srankNums.includes(n);
@@ -1782,7 +1777,7 @@ function renderSavedSets(flash=false){
     sh+='</div>';
 
     // 一致数表示
-    var countWin=shouldCheck?winData:(s.checked&&checkedWinData?checkedWinData:null);
+    var countWin=s.checked&&checkedWinData?checkedWinData:null;
     if(countWin){
       const hitCount=s.nums.filter(n=>countWin.nums.includes(n)).length;
       const bonusCount=s.nums.filter(n=>countWin.bonus.includes(n)).length;
