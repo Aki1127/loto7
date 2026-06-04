@@ -400,7 +400,8 @@
     <div class="card">
       <div class="card-title">▶ 保存済みデータ一覧</div>
       <div id="loaded-data-info"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="resetCheckedFlags()" style="background:var(--surface2);border:1px solid rgba(128,181,255,0.4);color:var(--accent);font-size:10px;">🔄 照合済みフラグをリセット</button>
         <button class="btn btn-sm btn-danger" onclick="confirmReset()">🗑 追加データを削除</button>
       </div>
       <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
@@ -897,11 +898,11 @@ function addNewResult(){
     let updated=false;
     saved.forEach(s=>{
       if(s.srankNums&&s.srankNums.length>0)recordSrankResult(s,newWin.nums,newWin.date);
-      // 照合対象セットに照合済みフラグを付ける
+      // 照合対象：保存日が当選日より前のセットのみ（今週分は対象外）
       if(!s.checked&&s.date){
         const savedDate=new Date(s.date.replace(/\//g,'-'));
         const winDate=new Date(newWin.date.replace(/\//g,'-'));
-        if(savedDate>=winDate){
+        if(savedDate<winDate){
           s.checked=true;
           s.checkedDate=newWin.date;
           updated=true;
@@ -1642,6 +1643,19 @@ function deleteSavedSet(idx){
   const saved=loadSavedSets();saved.splice(idx,1);saveSavedSets(saved);
   const wrap=document.getElementById('saved-sets-wrap');
   if(wrap)wrap.innerHTML=renderSavedSets();
+}
+
+function resetCheckedFlags(){
+  if(!confirm('照合済みフラグをリセットしますか？\n保存セットの照合結果がクリアされます。'))return;
+  const saved=loadSavedSets();
+  saved.forEach(function(s){
+    delete s.checked;
+    delete s.checkedDate;
+  });
+  saveSavedSets(saved);
+  const wrap=document.getElementById('saved-sets-wrap');
+  if(wrap)wrap.innerHTML=renderSavedSets();
+  alert('照合済みフラグをリセットしました。\n次回当選番号入力時に正しく照合されます。');
 }
 
 function clearSrankStats(){
