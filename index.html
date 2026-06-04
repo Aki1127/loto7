@@ -1725,10 +1725,14 @@ function renderSavedSets(flash=false){
     var shouldCheck=false;
     var checkedWinData=null;
     if(s.checked&&s.checkedDate){
-      // 照合済み：保存された結果を表示
+      // 照合済み：allData（ベース+追加）から当選データを検索
       checkedWinData=allData.find(function(d){return d.date===s.checkedDate;})||null;
+      // allDataで見つからない場合はextraDataからも検索
+      if(!checkedWinData){
+        checkedWinData=extraData.find(function(d){return d.date===s.checkedDate;})||null;
+      }
       if(checkedWinData){
-        prize=checkPrize(s.nums, checkedWinData.nums, checkedWinData.bonus);
+        prize=checkPrize(s.nums, checkedWinData.nums, checkedWinData.bonus||[]);
       }
     }
 
