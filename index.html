@@ -890,7 +890,18 @@ function addNewResult(){
   if(nums.some(n=>n<1)||new Set(nums).size<7){el.innerHTML='<div class="warn-banner">本数字を1〜37の7個入力してください</div>';return;}
   if(allData.some(d=>d.date===date)){el.innerHTML='<div class="warn-banner">この日付のデータは既に登録されています</div>';return;}
   extraData.push({date,nums:nums.sort((a,b)=>a-b),bonus:[b1,b2]});
-  saveToStorage();mergeData();renderAll();
+  
+  // ★ ここが重要：保存前に新バージョンを生成してキャッシュを無効化
+  const newCacheVersion=Date.now();
+  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
+  
+  saveToStorage();
+  
+  // ★ 強制的にメモリ内データを再読み込み
+  mergeData();
+  buildRankThresholds();
+  renderAll();
+  
   // 当選番号追加時にSランク照合を記録＆照合済みフラグを付ける
   const newWin=allData[allData.length-1];
   if(newWin){
@@ -914,19 +925,49 @@ function addNewResult(){
     const sp=document.getElementById('srank-stats-panel');
     if(sp)sp.innerHTML=renderSrankStats();
   }
-  el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！</div>';
+  
+  el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！<br><small>（自動反映中...）</small></div>';
   ["inp-date","n1","n2","n3","n4","n5","n6","n7","b1","b2"].forEach(id=>document.getElementById(id).value="");
-  setTimeout(()=>el.innerHTML="",3000);
+  
+  // ★ 3秒後にページ自動リロード（キャッシュをクリア）
+  setTimeout(()=>{
+    location.reload();
+  },1500);
 }
 function deleteEntry(date){
   if(!confirm(`${date} のデータを削除しますか？`))return;
-  extraData=extraData.filter(d=>d.date!==date);saveToStorage();mergeData();renderAll();
+  extraData=extraData.filter(d=>d.date!==date);
+  
+  // キャッシュバージョンを更新
+  const newCacheVersion=Date.now();
+  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
+  
+  saveToStorage();
+  mergeData();
+  renderAll();
+  
+  // 1秒後にページをリロード
+  setTimeout(()=>{
+    location.reload();
+  },1000);
 }
 function confirmReset(){
   try{const raw=localStorage.getItem(STORAGE_KEY);const cur=raw?JSON.parse(raw):[];if(cur.length>0)extraData=[...cur];}catch(e){}
   if(extraData.length===0){alert('追加データはありません。');return;}
   if(!confirm(`追加したデータをすべて削除しますか？\nベースデータ (${BASE_DATA.length}件) は残ります。`))return;
-  extraData=[];localStorage.removeItem(STORAGE_KEY);mergeData();renderAll();setSaveLabel('ベースデータのみ');
+  extraData=[];
+  localStorage.removeItem(STORAGE_KEY);
+  
+  // キャッシュバージョンを更新して無効化
+  const newCacheVersion=Date.now();
+  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
+  
+  mergeData();renderAll();setSaveLabel('ベースデータのみ');
+  
+  // 2秒後にページをリロード
+  setTimeout(()=>{
+    location.reload();
+  },1500);
 }
 
 // --------------------------------------------------------
@@ -2110,26 +2151,51 @@ function switchTab(tab,btn){
 }
 
 // --------------------------------------------------------
+// キャッシュバージョン管理
+// --------------------------------------------------------
+const CACHE_VERSION_KEY='loto7_cache_version_v1';
+const CURRENT_VERSION=Date.now(); // ミリ秒単位のタイムスタンプ
+
+function initCacheVersion(){
+  const stored=localStorage.getItem(CACHE_VERSION_KEY);
+  // 初回または古いバージョンの場合は全削除してリセット
+  if(!stored){
+    localStorage.setItem(CACHE_VERSION_KEY,CURRENT_VERSION.toString());
+  }
+}
+
+// --------------------------------------------------------
 // 初期化
 // --------------------------------------------------------
+initCacheVersion();
 loadFromStorage();
 mergeData();
 buildRankThresholds();
 renderAll();
 loadRoundsFromStorage(); // 保存済みラウンドを復元
+
 // スライダー初期設定
 Object.keys(weights).forEach(k=>{
   const sl=document.getElementById('w-'+k);
   if(sl)sl.style.setProperty('--pct',weights[k]+'%');
 });
 renderWeightBars();
+
 // 連続数スライダー初期設定
 const consSl=document.getElementById('w-cons');
 if(consSl)consSl.style.setProperty('--pct',(consSetsCount/8*100)+'%');
 updateConsStatus();
+
 // 初期割り当て: 4エリアを1つずつ
 consAreaList=[0,1,2,3];
 updateConsStatus();
+
+// デバッグ情報をヘッダーに表示
+const debugEl=document.getElementById('debug-info');
+if(debugEl){
+  debugEl.innerHTML=`v${CURRENT_VERSION} | 総${allData.length}件 (Base:${BASE_DATA.length} + Extra:${extraData.length}) | localStorage OK`;
+}
 </script>
 </body>
 </html>
+
