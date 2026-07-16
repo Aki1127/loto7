@@ -641,10 +641,13 @@ function calcConsAssignment(){
   const recent=allData.slice(-10);
   const recentHit=recent.filter(d=>getConsecutiveGroups(d.nums).length>0).length;
   let effectiveSets=consSetsCount;
-  if(consReverse){
+  
+  // ★ 修正：consSetsCount=0 の時は逆張り機能を適用しない（連続数なしを強制）
+  if(consReverse && consSetsCount > 0){
     if(recentHit>=7)effectiveSets=Math.max(0,consSetsCount-2);
     else if(recentHit<=3)effectiveSets=Math.min(8,consSetsCount+2);
   }
+  
   effectiveSets=Math.min(8,effectiveSets);
 
   // 割り当てリストが埋まっている場合はそのまま使う
@@ -926,13 +929,12 @@ function addNewResult(){
     if(sp)sp.innerHTML=renderSrankStats();
   }
   
-  el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！<br><small>（自動反映中...）</small></div>';
+  el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！<br><small>下の「次回予想生成」ボタンで新ラウンドを作成してください</small></div>';
   ["inp-date","n1","n2","n3","n4","n5","n6","n7","b1","b2"].forEach(id=>document.getElementById(id).value="");
   
-  // ★ 3秒後にページ自動リロード（キャッシュをクリア）
-  setTimeout(()=>{
-    location.reload();
-  },1500);
+  // キャッシュバージョン更新（ブラウザキャッシュ無効化用）
+  const newCacheVersion=Date.now();
+  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
 }
 function deleteEntry(date){
   if(!confirm(`${date} のデータを削除しますか？`))return;
@@ -945,11 +947,6 @@ function deleteEntry(date){
   saveToStorage();
   mergeData();
   renderAll();
-  
-  // 1秒後にページをリロード
-  setTimeout(()=>{
-    location.reload();
-  },1000);
 }
 function confirmReset(){
   try{const raw=localStorage.getItem(STORAGE_KEY);const cur=raw?JSON.parse(raw):[];if(cur.length>0)extraData=[...cur];}catch(e){}
@@ -963,11 +960,6 @@ function confirmReset(){
   localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
   
   mergeData();renderAll();setSaveLabel('ベースデータのみ');
-  
-  // 2秒後にページをリロード
-  setTimeout(()=>{
-    location.reload();
-  },1500);
 }
 
 // --------------------------------------------------------
@@ -1054,8 +1046,12 @@ function getMiniStyle(n,nums,axes,lastNums){
 // 予想生成
 // --------------------------------------------------------
 function generatePredictions(auto=false){
-  const fa=getFrequency(allData,10),fr=getFrequency(allData),cd=getCycleData(allData);
+  // ★ 修正：新ラウンド生成時に必ず localStorage から最新データを再読み込み
+  loadFromStorage();
+  mergeData();
   buildRankThresholds();
+  
+  const fa=getFrequency(allData,10),fr=getFrequency(allData),cd=getCycleData(allData);
   const scores={};for(let i=1;i<=37;i++)scores[i]=scoreNumberWeighted(i,fa,fr,cd);
 
   let axes=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,7).map(x=>parseInt(x[0]));
