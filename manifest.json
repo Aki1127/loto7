@@ -1,6 +1,6 @@
 {
-  "name": "ロト7 ANALYZER",
-  "short_name": "ロト7",
+  "name": "ロト7 ANALYZER v5",
+ "short_name": "ロト7 v5",
   "description": "ロト7出現頻度・周期・予想 総合分析",
   "start_url": "/loto7/",
   "display": "minimal-ui",
