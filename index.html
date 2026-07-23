@@ -935,17 +935,15 @@ function addNewResult(){
   el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！<br><small>下の「次回予想生成」ボタンで新ラウンドを作成してください</small></div>';
   ["inp-date","n1","n2","n3","n4","n5","n6","n7","b1","b2"].forEach(id=>document.getElementById(id).value="");
   
-  // キャッシュバージョン更新（ブラウザキャッシュ無効化用）
-  const newCacheVersion=Date.now();
-  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
+  // ★ キャッシュバージョン更新（CURRENT_VERSION を使用）
+  localStorage.setItem(CACHE_VERSION_KEY, Date.now().toString());
 }
 function deleteEntry(date){
   if(!confirm(`${date} のデータを削除しますか？`))return;
   extraData=extraData.filter(d=>d.date!==date);
   
   // キャッシュバージョンを更新
-  const newCacheVersion=Date.now();
-  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
+  localStorage.setItem(CACHE_VERSION_KEY, Date.now().toString());
   
   saveToStorage();
   mergeData();
@@ -958,9 +956,8 @@ function confirmReset(){
   extraData=[];
   localStorage.removeItem(STORAGE_KEY);
   
-  // キャッシュバージョンを更新して無効化
-  const newCacheVersion=Date.now();
-  localStorage.setItem(CACHE_VERSION_KEY,newCacheVersion.toString());
+  // キャッシュバージョンを更新
+  localStorage.setItem(CACHE_VERSION_KEY, Date.now().toString());
   
   mergeData();renderAll();setSaveLabel('ベースデータのみ');
 }
