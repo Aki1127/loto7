@@ -2173,6 +2173,16 @@ buildRankThresholds();
 renderAll();
 loadRoundsFromStorage(); // 保存済みラウンドを復元
 
+// ★ 「データ読み込み中...」を絶対に消す（重要：UIブロック解除）
+setTimeout(()=>{
+  const loaders = document.querySelectorAll('[class*="loading"], [id*="loading"]');
+  loaders.forEach(el => {
+    if(el.textContent.includes('読み込み') || el.textContent.includes('中')){
+      el.style.display = 'none';
+    }
+  });
+}, 100);
+
 // スライダー初期設定
 Object.keys(weights).forEach(k=>{
   const sl=document.getElementById('w-'+k);
@@ -2197,4 +2207,3 @@ if(debugEl){
 </script>
 </body>
 </html>
-
