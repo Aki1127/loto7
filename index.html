@@ -409,6 +409,17 @@
         <button class="btn btn-sm" onclick="debugScanStorage()" style="background:#3a2a00;border:1px solid #ffb400;color:#ffb400;font-size:10px;">🔍 保存領域を診断</button>
         <button class="btn btn-sm" onclick="exportBackup()" style="background:#0a2a1a;border:1px solid #2ecc71;color:#2ecc71;font-size:10px;">📤 バックアップ書出</button>
         <button class="btn btn-sm" onclick="showImportBox()" style="background:#0a1a3a;border:1px solid #4a90e2;color:#4a90e2;font-size:10px;">📥 バックアップ復元</button>
+        <button class="btn btn-sm" onclick="showSyncBox()" style="background:#1a0a3a;border:1px solid #a855f7;color:#a855f7;font-size:10px;">☁️ 自動同期設定</button>
+      </div>
+      <div id="sync-box" style="display:none;margin-bottom:8px;">
+        <div style="font-size:11px;color:#ccc;margin-bottom:4px;">Google Apps ScriptのウェブアプリURL(.../exec)を入力してください</div>
+        <input id="sync-url-input" type="text" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;font-size:11px;background:#111;color:#e9c;border:1px solid #a855f7;border-radius:6px;padding:8px;box-sizing:border-box;"/>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="saveSyncUrl()" style="background:#1a0a3a;border:1px solid #a855f7;color:#a855f7;font-size:10px;">URLを保存</button>
+          <button class="btn btn-sm" onclick="runSync()" style="background:#1a0a3a;border:1px solid #a855f7;color:#a855f7;font-size:10px;">今すぐ同期</button>
+          <button class="btn btn-sm" onclick="document.getElementById('sync-box').style.display='none'" style="background:var(--surface2);border:1px solid rgba(255,255,255,0.2);color:#ccc;font-size:10px;">閉じる</button>
+        </div>
+        <div id="sync-status" style="font-size:11px;color:#a855f7;margin-top:6px;"></div>
       </div>
       <div id="debug-scan-result" style="font-size:11px;line-height:1.6;white-space:pre-wrap;background:#111;padding:8px;border-radius:6px;margin-bottom:8px;display:none;"></div>
       <div id="backup-box" style="display:none;margin-bottom:8px;">
@@ -1044,6 +1055,49 @@ function runImport(){
   renderAll();
   alert(`復元完了：${added}件を追加、${skipped}件は重複のためスキップしました。`);
   document.getElementById('import-box').style.display='none';
+}
+const SYNC_URL_KEY='loto7_sync_url';
+function showSyncBox(){
+  document.getElementById('sync-box').style.display='block';
+  document.getElementById('backup-box').style.display='none';
+  document.getElementById('import-box').style.display='none';
+  const saved=localStorage.getItem(SYNC_URL_KEY);
+  if(saved)document.getElementById('sync-url-input').value=saved;
+}
+function saveSyncUrl(){
+  const url=document.getElementById('sync-url-input').value.trim();
+  if(!url.startsWith('https://script.google.com/')){alert('URLが正しくないようです（script.google.comで始まるURLを入力してください）');return;}
+  localStorage.setItem(SYNC_URL_KEY,url);
+  document.getElementById('sync-status').textContent='URLを保存しました。「今すぐ同期」で試せます。';
+}
+async function runSync(){
+  const url=localStorage.getItem(SYNC_URL_KEY)||document.getElementById('sync-url-input').value.trim();
+  if(!url){alert('先にURLを保存してください。');return;}
+  const statusEl=document.getElementById('sync-status');
+  statusEl.textContent='同期中…';
+  try{
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const arr=await res.json();
+    if(!Array.isArray(arr))throw new Error('データ形式が不正です');
+    let added=0;
+    arr.forEach(d=>{
+      if(!d||!d.date||!Array.isArray(d.nums))return;
+      if(allData.some(x=>x.date===d.date)||extraData.some(x=>x.date===d.date))return;
+      extraData.push({date:d.date,nums:d.nums,bonus:d.bonus||[0,0]});
+      added++;
+    });
+    if(added>0){saveToStorage();mergeData();buildRankThresholds();renderAll();}
+    statusEl.textContent=`同期完了：${added}件を新規追加しました。（全${arr.length}件中）`;
+  }catch(e){
+    statusEl.textContent='同期に失敗しました: '+e.message+'\n（ウェブアプリのURLとデプロイ設定を確認してください）';
+  }
+}
+// ページ読み込み時、URLが保存されていれば自動で同期を試みる
+function autoSyncOnLoad(){
+  const url=localStorage.getItem(SYNC_URL_KEY);
+  if(!url)return;
+  runSync();
 }
 function confirmReset(){
   try{const raw=localStorage.getItem(STORAGE_KEY);const cur=raw?JSON.parse(raw):[];if(cur.length>0)extraData=[...cur];}catch(e){}
@@ -2267,6 +2321,7 @@ if(navigator.storage&&navigator.storage.persist){
 loadFromStorage();
 mergeData();
 buildRankThresholds();
+autoSyncOnLoad();
 renderAll();
 loadRoundsFromStorage(); // 保存済みラウンドを復元
 
