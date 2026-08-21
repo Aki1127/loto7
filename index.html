@@ -1075,23 +1075,43 @@ async function runSync(){
   if(!url){alert('先にURLを保存してください。');return;}
   const statusEl=document.getElementById('sync-status');
   statusEl.textContent='同期中…';
-  try{
-    const res=await fetch(url);
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const arr=await res.json();
-    if(!Array.isArray(arr))throw new Error('データ形式が不正です');
-    let added=0;
-    arr.forEach(d=>{
-      if(!d||!d.date||!Array.isArray(d.nums))return;
-      if(allData.some(x=>x.date===d.date)||extraData.some(x=>x.date===d.date))return;
-      extraData.push({date:d.date,nums:d.nums,bonus:d.bonus||[0,0]});
-      added++;
-    });
-    if(added>0){saveToStorage();mergeData();buildRankThresholds();renderAll();}
-    statusEl.textContent=`同期完了：${added}件を新規追加しました。（全${arr.length}件中）`;
-  }catch(e){
-    statusEl.textContent='同期に失敗しました: '+e.message+'\n（ウェブアプリのURLとデプロイ設定を確認してください）';
+
+  const cbName='loto7SyncCb_'+Date.now();
+  let script;
+  const timeoutId=setTimeout(()=>{
+    cleanup();
+    statusEl.textContent='同期がタイムアウトしました。URLを確認してください。';
+  },15000);
+  function cleanup(){
+    clearTimeout(timeoutId);
+    delete window[cbName];
+    if(script&&script.parentNode)script.parentNode.removeChild(script);
   }
+  window[cbName]=function(arr){
+    cleanup();
+    try{
+      if(!Array.isArray(arr))throw new Error('データ形式が不正です');
+      let added=0;
+      arr.forEach(d=>{
+        if(!d||!d.date||!Array.isArray(d.nums))return;
+        if(allData.some(x=>x.date===d.date)||extraData.some(x=>x.date===d.date))return;
+        extraData.push({date:d.date,nums:d.nums,bonus:d.bonus||[0,0]});
+        added++;
+      });
+      if(added>0){saveToStorage();mergeData();buildRankThresholds();renderAll();}
+      statusEl.textContent=`同期完了：${added}件を新規追加しました。（全${arr.length}件中）`;
+    }catch(e){
+      statusEl.textContent='同期に失敗しました: '+e.message;
+    }
+  };
+  script=document.createElement('script');
+  const sep=url.includes('?')?'&':'?';
+  script.src=url+sep+'callback='+cbName;
+  script.onerror=()=>{
+    cleanup();
+    statusEl.textContent='同期に失敗しました（読み込みエラー）。URLとデプロイ設定を確認してください。';
+  };
+  document.body.appendChild(script);
 }
 // ページ読み込み時、URLが保存されていれば自動で同期を試みる
 function autoSyncOnLoad(){
