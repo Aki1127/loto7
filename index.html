@@ -406,7 +406,9 @@
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px;flex-wrap:wrap;">
         <button class="btn btn-sm" onclick="resetCheckedFlags()" style="background:var(--surface2);border:1px solid rgba(128,181,255,0.4);color:var(--accent);font-size:10px;">🔄 照合済みフラグをリセット</button>
         <button class="btn btn-sm btn-danger" onclick="confirmReset()">🗑 追加データを削除</button>
+        <button class="btn btn-sm" onclick="debugScanStorage()" style="background:#3a2a00;border:1px solid #ffb400;color:#ffb400;font-size:10px;">🔍 保存領域を診断</button>
       </div>
+      <div id="debug-scan-result" style="font-size:11px;line-height:1.6;white-space:pre-wrap;background:#111;padding:8px;border-radius:6px;margin-bottom:8px;display:none;"></div>
       <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
         <table class="cycle-table">
           <thead><tr><th>日付</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>B1</th><th>B2</th><th></th></tr></thead>
@@ -948,6 +950,32 @@ function deleteEntry(date){
   saveToStorage();
   mergeData();
   renderAll();
+}
+function debugScanStorage(){
+  const out=document.getElementById('debug-scan-result');
+  out.style.display='block';
+  let lines=[];
+  lines.push('▼ このブラウザ(このサイト)に保存されている全キー一覧');
+  lines.push('件数: '+localStorage.length+'個');
+  lines.push('');
+  const knownKeys=[STORAGE_KEY,SAVED_KEY,ROUNDS_KEY,STATS_KEY,CACHE_VERSION_KEY];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    const v=localStorage.getItem(k);
+    let countInfo='';
+    try{
+      const parsed=JSON.parse(v);
+      if(Array.isArray(parsed))countInfo=' → 配列 '+parsed.length+'件';
+    }catch(e){}
+    const mark=knownKeys.includes(k)?'(現在使用中)':'★未使用の可能性あり★';
+    lines.push('・'+k+countInfo+'  '+mark+'  ['+v.length+'文字]');
+  }
+  lines.push('');
+  lines.push('▼ 現在の変数 extraData の中身: '+extraData.length+'件');
+  if(extraData.length>0){
+    lines.push(extraData.map(d=>d.date).join(', '));
+  }
+  out.textContent=lines.join('\n');
 }
 function confirmReset(){
   try{const raw=localStorage.getItem(STORAGE_KEY);const cur=raw?JSON.parse(raw):[];if(cur.length>0)extraData=[...cur];}catch(e){}
