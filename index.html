@@ -1391,7 +1391,7 @@ function generateBestSet(axes,scores,targetZones,strategy,cd,usedSets,useConsecu
     const base=cands.sort((a,b)=>scores[b]-scores[a]).slice(0,15);
     const delta=Math.floor(Math.random()*5)+1;
     const dSet=new Set();
-    base.forEach(n=>{[n-delta,n,n+delta].forEach(v=>{if(v>=1&&v<=37&&!axes.includes(v))dSet.add(v);});});
+    base.forEach(n=>{[n-delta,n,n+delta].forEach(v=>{if(v>=1&&v<=37&&!axes.includes(v)&&!forcedCons.includes(v))dSet.add(v);});});
     picked=[...dSet].sort(()=>Math.random()-0.5).slice(0,need);
   }else{
     picked=cands.sort(()=>Math.random()-0.5).slice(0,need);
@@ -1439,7 +1439,14 @@ function generateBestSet(axes,scores,targetZones,strategy,cd,usedSets,useConsecu
       picked.push(r2[0]);
     }
   }
-  let result=[...axes,...forcedCons,...picked].slice(0,7).sort((a,b)=>a-b);
+  let result=[...new Set([...axes,...forcedCons,...picked])].slice(0,7).sort((a,b)=>a-b);
+  // 万一7個に満たない場合（重複除去等で不足）は残数字から補充
+  while(result.length<7){
+    const filler=allNums.filter(n=>!result.includes(n)).sort((a,b)=>scores[b]-scores[a]);
+    if(!filler.length)break;
+    result.push(filler[0]);
+    result=result.sort((a,b)=>a-b);
+  }
   if(usedSets&&usedSets.has(result.join(','))){
     const alt=allNums.filter(n=>!result.includes(n));
     if(alt.length>0)result.splice(Math.floor(Math.random()*result.length),1,alt[Math.floor(Math.random()*alt.length)]);
