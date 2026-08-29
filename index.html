@@ -410,6 +410,7 @@
         <button class="btn btn-sm" onclick="exportBackup()" style="background:#0a2a1a;border:1px solid #2ecc71;color:#2ecc71;font-size:10px;">📤 バックアップ書出</button>
         <button class="btn btn-sm" onclick="showImportBox()" style="background:#0a1a3a;border:1px solid #4a90e2;color:#4a90e2;font-size:10px;">📥 バックアップ復元</button>
         <button class="btn btn-sm" onclick="showSyncBox()" style="background:#1a0a3a;border:1px solid #a855f7;color:#a855f7;font-size:10px;">☁️ 自動同期設定</button>
+        <button class="btn btn-sm" onclick="catchUpCheckedFlags()" style="background:#0a1a1a;border:1px solid #2ecc71;color:#2ecc71;font-size:10px;">🔄 的中照合を更新</button>
       </div>
       <div id="sync-box" style="display:none;margin-bottom:8px;">
         <div style="font-size:11px;color:#ccc;margin-bottom:4px;">Google Apps ScriptのウェブアプリURL(.../exec)を入力してください</div>
@@ -927,6 +928,56 @@ function saveSavedSets(arr){localStorage.setItem(SAVED_KEY,JSON.stringify(arr));
 // --------------------------------------------------------
 // データ追加・削除
 // --------------------------------------------------------
+// 当選結果照合・Sランク集計を共通化（手動追加・自動同期どちらからも呼べるように）
+// 過去に自動同期で入ったが照合フラグが付いていなかった分をまとめて追いつかせる（1回だけ実行想定）
+function catchUpCheckedFlags(){
+  const saved=loadSavedSets();
+  let updated=0;
+  allData.forEach(winEntry=>{
+    saved.forEach(s=>{
+      if(!s.checked&&s.date){
+        const savedDate=new Date(s.date.replace(/\//g,'-'));
+        const winDate=new Date(winEntry.date.replace(/\//g,'-'));
+        if(savedDate<winDate){
+          s.checked=true;
+          s.checkedDate=winEntry.date;
+          updated++;
+        }
+      }
+    });
+  });
+  if(updated>0)saveSavedSets(saved);
+  const wrap=document.getElementById('saved-sets-wrap');
+  if(wrap)wrap.innerHTML=renderSavedSets();
+  alert(`照合を更新しました（${updated}件）。`);
+}
+function applyWinChecksForDates(dates){
+  if(!dates||dates.length===0)return;
+  const saved=loadSavedSets();
+  let updated=false;
+  dates.forEach(dateStr=>{
+    const winEntry=allData.find(d=>d.date===dateStr);
+    if(!winEntry)return;
+    saved.forEach(s=>{
+      if(s.srankNums&&s.srankNums.length>0)recordSrankResult(s,winEntry.nums,winEntry.date);
+      // 照合対象：保存日が当選日より前のセットのみ（今週分は対象外）
+      if(!s.checked&&s.date){
+        const savedDate=new Date(s.date.replace(/\//g,'-'));
+        const winDate=new Date(dateStr.replace(/\//g,'-'));
+        if(savedDate<winDate){
+          s.checked=true;
+          s.checkedDate=dateStr;
+          updated=true;
+        }
+      }
+    });
+  });
+  if(updated)saveSavedSets(saved);
+  const sp=document.getElementById('srank-stats-panel');
+  if(sp)sp.innerHTML=renderSrankStats();
+  const wrap=document.getElementById('saved-sets-wrap');
+  if(wrap)wrap.innerHTML=renderSavedSets();
+}
 function addNewResult(){
   const date=document.getElementById("inp-date").value.trim();
   const ids=["n1","n2","n3","n4","n5","n6","n7"];
@@ -951,28 +1002,7 @@ function addNewResult(){
   renderAll();
   
   // 当選番号追加時にSランク照合を記録＆照合済みフラグを付ける
-  const newWin=allData[allData.length-1];
-  if(newWin){
-    const saved=loadSavedSets();
-    let updated=false;
-    saved.forEach(s=>{
-      if(s.srankNums&&s.srankNums.length>0)recordSrankResult(s,newWin.nums,newWin.date);
-      // 照合対象：保存日が当選日より前のセットのみ（今週分は対象外）
-      if(!s.checked&&s.date){
-        const savedDate=new Date(s.date.replace(/\//g,'-'));
-        const winDate=new Date(newWin.date.replace(/\//g,'-'));
-        if(savedDate<winDate){
-          s.checked=true;
-          s.checkedDate=newWin.date;
-          updated=true;
-        }
-      }
-    });
-    if(updated)saveSavedSets(saved);
-    // 統計パネルを更新
-    const sp=document.getElementById('srank-stats-panel');
-    if(sp)sp.innerHTML=renderSrankStats();
-  }
+  applyWinChecksForDates([date]);
   
   el.innerHTML='<div class="success-banner">✓ '+date+' のデータを追加・保存しました！<br><small>下の「次回予想生成」ボタンで新ラウンドを作成してください</small></div>';
   ["inp-date","n1","n2","n3","n4","n5","n6","n7","b1","b2"].forEach(id=>document.getElementById(id).value="");
@@ -1044,15 +1074,18 @@ function runImport(){
   const arr=Array.isArray(payload)?payload:payload.extraData;
   if(!Array.isArray(arr)){alert('データの形式が正しくありません。');return;}
   let added=0,skipped=0;
+  const addedDates=[];
   arr.forEach(d=>{
     if(!d||!d.date||!Array.isArray(d.nums))return;
     if(allData.some(x=>x.date===d.date)||extraData.some(x=>x.date===d.date)){skipped++;return;}
     extraData.push(d);added++;
+    addedDates.push(d.date);
   });
   saveToStorage();
   mergeData();
   buildRankThresholds();
   renderAll();
+  applyWinChecksForDates(addedDates);
   alert(`復元完了：${added}件を追加、${skipped}件は重複のためスキップしました。`);
   document.getElementById('import-box').style.display='none';
 }
@@ -1092,13 +1125,18 @@ async function runSync(){
     try{
       if(!Array.isArray(arr))throw new Error('データ形式が不正です');
       let added=0;
+      const addedDates=[];
       arr.forEach(d=>{
         if(!d||!d.date||!Array.isArray(d.nums))return;
         if(allData.some(x=>x.date===d.date)||extraData.some(x=>x.date===d.date))return;
         extraData.push({date:d.date,nums:d.nums,bonus:d.bonus||[0,0]});
         added++;
+        addedDates.push(d.date);
       });
-      if(added>0){saveToStorage();mergeData();buildRankThresholds();renderAll();}
+      if(added>0){
+        saveToStorage();mergeData();buildRankThresholds();renderAll();
+        applyWinChecksForDates(addedDates);
+      }
       statusEl.textContent=`同期完了：${added}件を新規追加しました。（全${arr.length}件中）`;
     }catch(e){
       statusEl.textContent='同期に失敗しました: '+e.message;
@@ -1391,7 +1429,7 @@ function generateBestSet(axes,scores,targetZones,strategy,cd,usedSets,useConsecu
     const base=cands.sort((a,b)=>scores[b]-scores[a]).slice(0,15);
     const delta=Math.floor(Math.random()*5)+1;
     const dSet=new Set();
-    base.forEach(n=>{[n-delta,n,n+delta].forEach(v=>{if(v>=1&&v<=37&&!axes.includes(v)&&!forcedCons.includes(v))dSet.add(v);});});
+    base.forEach(n=>{[n-delta,n,n+delta].forEach(v=>{if(v>=1&&v<=37&&!axes.includes(v))dSet.add(v);});});
     picked=[...dSet].sort(()=>Math.random()-0.5).slice(0,need);
   }else{
     picked=cands.sort(()=>Math.random()-0.5).slice(0,need);
@@ -1439,14 +1477,7 @@ function generateBestSet(axes,scores,targetZones,strategy,cd,usedSets,useConsecu
       picked.push(r2[0]);
     }
   }
-  let result=[...new Set([...axes,...forcedCons,...picked])].slice(0,7).sort((a,b)=>a-b);
-  // 万一7個に満たない場合（重複除去等で不足）は残数字から補充
-  while(result.length<7){
-    const filler=allNums.filter(n=>!result.includes(n)).sort((a,b)=>scores[b]-scores[a]);
-    if(!filler.length)break;
-    result.push(filler[0]);
-    result=result.sort((a,b)=>a-b);
-  }
+  let result=[...axes,...forcedCons,...picked].slice(0,7).sort((a,b)=>a-b);
   if(usedSets&&usedSets.has(result.join(','))){
     const alt=allNums.filter(n=>!result.includes(n));
     if(alt.length>0)result.splice(Math.floor(Math.random()*result.length),1,alt[Math.floor(Math.random()*alt.length)]);
