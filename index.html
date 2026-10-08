@@ -1262,7 +1262,8 @@ function generatePredictions(auto=false){
   const fa=getFrequency(allData,10),fr=getFrequency(allData),cd=getCycleData(allData);
   const scores={};for(let i=1;i<=37;i++)scores[i]=scoreNumberWeighted(i,fa,fr,cd);
 
-  let axes=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,7).map(x=>parseInt(x[0]));
+  // ★ 修正：自動選択の軸は上位3個まで（7個だと全セットがほぼ同じになるため）
+  let axes=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>parseInt(x[0]));
   if(!auto&&selectedNums.size>0)axes=[...selectedNums];
 
   const pts=getZonePatterns(allData);
@@ -1429,7 +1430,7 @@ function generateBestSet(axes,scores,targetZones,strategy,cd,usedSets,useConsecu
     const base=cands.sort((a,b)=>scores[b]-scores[a]).slice(0,15);
     const delta=Math.floor(Math.random()*5)+1;
     const dSet=new Set();
-    base.forEach(n=>{[n-delta,n,n+delta].forEach(v=>{if(v>=1&&v<=37&&!axes.includes(v))dSet.add(v);});});
+    base.forEach(n=>{[n-delta,n,n+delta].forEach(v=>{if(v>=1&&v<=37&&!axes.includes(v)&&!forcedCons.includes(v))dSet.add(v);});});
     picked=[...dSet].sort(()=>Math.random()-0.5).slice(0,need);
   }else{
     picked=cands.sort(()=>Math.random()-0.5).slice(0,need);
@@ -1477,10 +1478,17 @@ function generateBestSet(axes,scores,targetZones,strategy,cd,usedSets,useConsecu
       picked.push(r2[0]);
     }
   }
-  let result=[...axes,...forcedCons,...picked].slice(0,7).sort((a,b)=>a-b);
+  // ★ 修正：重複数字を除去し、足りない分をスコア順で補充（軸は必ず残す）
+  let result=[...new Set([...axes,...forcedCons,...picked])].slice(0,7);
+  if(result.length<7){
+    const fill=allNums.filter(n=>!result.includes(n)).sort((a,b)=>scores[b]-scores[a]);
+    while(result.length<7&&fill.length)result.push(fill.shift());
+  }
+  result.sort((a,b)=>a-b);
   if(usedSets&&usedSets.has(result.join(','))){
     const alt=allNums.filter(n=>!result.includes(n));
-    if(alt.length>0)result.splice(Math.floor(Math.random()*result.length),1,alt[Math.floor(Math.random()*alt.length)]);
+    const nonAxis=result.map((n,i)=>i).filter(i=>!axes.includes(result[i]));
+    if(alt.length>0&&nonAxis.length>0)result.splice(nonAxis[Math.floor(Math.random()*nonAxis.length)],1,alt[Math.floor(Math.random()*alt.length)]);
     result=result.sort((a,b)=>a-b);
   }
   return result;
